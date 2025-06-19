@@ -5,8 +5,8 @@ startTick := A_TickCount
 ; Create GUI
 myGui := Gui("-Caption +ToolWindow +AlwaysOnTop")
 myGui.BackColor := "222222"
-myGui.SetFont("s12 Bold cLime", "Segoe UI") ; Counter: bright green
-counterText := myGui.AddText("w130 h35 Center", "00:00:00")
+myGui.SetFont("s18 Bold cLime", "Segoe UI") ; Counter: larger bright green
+counterText := myGui.AddText("w130 h50 Center", "00:00:00")
 myGui.SetFont("s10 cGray", "Segoe UI") ; Clock: smaller, gray
 clockText := myGui.AddText("w130 h20 Center", "00:00")
 ; Replace the break button with a styled Text control
@@ -58,20 +58,24 @@ updateTimer(*) {
         elapsed := A_TickCount - startTick
         pausedElapsed := elapsed
         if (elapsed >= 3600000) {
-            if ((A_TickCount // 500) mod 2) {
+            ; Flash 'Take Break' in red
+            if (Mod(A_TickCount // 500, 2)) {
                 breakText.Opt("BackgroundFF0000") ; Red
                 breakText.SetFont("cFFFFFF") ; White text
             } else {
-                breakText.Opt("Background00FF00") ; Green
-                breakText.SetFont("c222222") ; Dark text
+                breakText.Opt("Background808080") ; Gray
+                breakText.SetFont("cFFFFFF") ; White text
             }
-            breakText.Text := "On Break"
+            breakText.Text := "Take Break"
             breakText.Visible := true
             breakTextAutoHide := false
         } else {
             breakText.Text := "Take Break"
             breakText.Opt("Background808080") ; Gray
             breakText.SetFont("cFFFFFF") ; White text
+            if (!breakText.Visible) {
+                ; Only show if hover logic triggers
+            }
         }
     }
     hours := elapsed // 3600000
@@ -91,17 +95,42 @@ updateTimer(*) {
     }
     clock := (hour < 10 ? "0" : "") . hour . ":" . min . " " . ampm
     clockText.Text := clock
+    ; Timer color logic
+    if (!breakActive) {
+        if (elapsed >= 3600000) {
+            ; Red and flashing
+            if (Mod(A_TickCount // 500, 2)) {
+                counterText.SetFont("cFF0000") ; Red
+            } else {
+                counterText.SetFont("c222222") ; Default/dark
+            }
+        } else if (elapsed >= 3300000) {
+            ; Yellow for last 5 minutes
+            counterText.SetFont("cFFFF00") ; Yellow
+        } else {
+            counterText.SetFont("cLime") ; Default green
+        }
+    } else {
+        counterText.SetFont("cLime") ; Default green during break
+    }
 }
 
 BreakTextHandler(txt, *) {
-    global breakActive, breakStart, pauseTick, pausedElapsed, breakTextAutoHide
+    global breakActive, breakStart, pauseTick, pausedElapsed, breakTextAutoHide, startTick, breakText
     breakTextAutoHide := false
     if (!breakActive) {
         breakActive := true
         breakStart := A_TickCount
         pauseTick := A_TickCount
+        breakText.Text := "On Break"
+        breakText.Opt("Background00FF00") ; Green
+        breakText.SetFont("c222222") ; Dark text
     } else {
         breakActive := false
+        startTick := A_TickCount  ; Reset the one hour timer
+        breakText.Text := "Take Break"
+        breakText.Opt("Background808080") ; Gray
+        breakText.SetFont("cFFFFFF") ; White text
     }
 }
 
@@ -170,3 +199,30 @@ CheckMouseOverControls() {
 }
 
 ^q::ExitApp
+
+^Right::AddFiveMinutes()
+
+AddFiveMinutes() {
+    global startTick
+    startTick -= 300000 ; Subtract 5 minutes (in ms) from startTick to increment timer
+}
+
+^Left::SubtractFiveMinutes()
+
+SubtractFiveMinutes() {
+    global startTick
+    startTick += 300000 ; Add 5 minutes (in ms) to startTick to decrement timer
+}
+
+^.::AddOneMinute()
+^,::SubtractOneMinute()
+
+AddOneMinute() {
+    global startTick
+    startTick -= 60000 ; Subtract 1 minute (in ms) from startTick to increment timer
+}
+
+SubtractOneMinute() {
+    global startTick
+    startTick += 60000 ; Add 1 minute (in ms) to startTick to decrement timer
+}
