@@ -1,6 +1,27 @@
 #Requires AutoHotkey v2.0
 
+; Parse command line arguments
+sessionTime := 1800000 ; Default: 30 minutes
+breakTime := 600000 ; Default: 10 minutes
+totalTime := 10800000 ; Default: 180 minutes (3 hours)
+
+; Check for command line arguments
+if (A_Args.Length >= 1) {
+    sessionTime := A_Args[1] * 60000 ; Convert minutes to milliseconds
+}
+if (A_Args.Length >= 2) {
+    breakTime := A_Args[2] * 60000 ; Convert minutes to milliseconds
+}
+if (A_Args.Length >= 3) {
+    totalTime := A_Args[3] * 60000 ; Convert minutes to milliseconds
+}
+
 startTick := A_TickCount
+currentTotalTime := 0
+currentSessionTime := 0
+pausedSessionTime := 0
+pauseTick := 0
+isFirstTick := true
 
 ; Create GUI
 myGui := Gui("-Caption +ToolWindow +AlwaysOnTop")
@@ -30,7 +51,6 @@ totalTitle := myGui.AddText("w130 h18 Center", "Total Time")
 myGui.SetFont("s18 c3399FF Bold", "Segoe UI")
 totalTimeText := myGui.AddText("w130 h28 Center y+0", "00:00")
 
-totalTime := 0
 lastTotalTick := A_TickCount
 
 myGui.SetFont("s12 Bold", "Segoe UI")
@@ -42,13 +62,11 @@ breakTextMouseOver := false
 breakActive := false
 breakStart := 0
 flashTimer := 0
-pausedElapsed := 0
-pauseTick := 0
+
 myGui.Show("x20 y20 NoActivate")
 
 ; Add a timer to check mouse position
 SetTimer(updateTimer, 500)
-SetTimer(AutoHideBreakText, 500)
 
 ; Make the GUI draggable
 counterText.OnEvent("Click", GuiStartDrag)
@@ -61,23 +79,21 @@ totalTitle.OnEvent("Click", GuiStartDrag)
 ; Add a timer to check mouse position over timer/clock
 SetTimer(CheckMouseOverControls, 100)
 
-; When script starts, initialize totalTime to match timer
-initElapsed := A_TickCount - startTick
-if (initElapsed > 0) {
-    totalTime := initElapsed
-}
-
 finished := false
 
 updateTimer(*) {
-    global finished, startTick, counterText, clockText, breakText, breakActive, breakStart, flashTimer, pausedElapsed, pauseTick, breakTextLastShown, breakTextAutoHide, myGui, totalTime, lastTotalTick, totalTimeText
+    global finished, startTick, counterText, clockText, breakText, breakActive, breakStart, flashTimer, pausedSessionTime, pauseTick, breakTextLastShown, breakTextAutoHide, myGui, currentTotalTime, lastTotalTick, totalTimeText, sessionTime, isFirstTick
     if (finished) {
         return
     }
+    if (isFirstTick) {
+        currentSessionTime := 0
+        isFirstTick := false
+    }
     if breakActive {
-        elapsed := pausedElapsed
+        currentSessionTime := pausedSessionTime
         ; Flash after 10 minutes on break
-        if (A_TickCount - breakStart >= 600000) {
+        if (A_TickCount - breakStart >= breakTime) {
             flashTimer := !flashTimer
             breakText.Visible := flashTimer
         } else {
@@ -92,9 +108,9 @@ updateTimer(*) {
             startTick += (A_TickCount - pauseTick)
             pauseTick := 0
         }
-        elapsed := A_TickCount - startTick
-        pausedElapsed := elapsed
-        if (elapsed >= 1800000) {
+        currentSessionTime := Max(A_TickCount - startTick, 0)
+        pausedSessionTime := currentSessionTime
+        if (currentSessionTime >= sessionTime) {
             ; Flash 'Take Break' in red
             if (Mod(A_TickCount // 500, 2)) {
                 breakText.Opt("BackgroundFF0000") ; Red
@@ -116,10 +132,11 @@ updateTimer(*) {
         }
     }
     ; Only clamp display, not elapsed
-    displayElapsed := Max(elapsed, 0)
-    mins := displayElapsed // 60000
-    secs := Mod(displayElapsed // 1000, 60)
-    counterText.Text := (mins < 10 ? "0" : "") . mins . ":" . (secs < 10 ? "0" : "") . secs
+    displaySessionTime := Max(currentSessionTime, 0)
+    mins := displaySessionTime // 60000
+    secs := Mod(displaySessionTime // 1000, 60)
+    counterText.Text := Format("{:02}:{:02}", mins, secs)
+    
     ; 12-hour clock with AM/PM
     hour := SubStr(A_Now, 9, 2) + 0
     min := SubStr(A_Now, 11, 2)
@@ -142,14 +159,14 @@ updateTimer(*) {
             } else {
                 counterText.SetFont("cLime") ; Visible (default green)
             }
-        } else if (elapsed >= 1800000) { ; 30 minutes
+        } else if (currentSessionTime >= sessionTime) { ; Default: 30 minutes
             ; Red and flashing
             if (Mod(A_TickCount // 500, 2)) {
                 counterText.SetFont("cFF0000") ; Red
             } else {
                 counterText.SetFont("c222222") ; Default/dark
             }
-        } else if (elapsed >= 1500000) { ; 25 minutes
+        } else if (currentSessionTime >= sessionTime - 300000) { ; Default: 25 minutes
             counterText.SetFont("cFFFF00") ; Yellow
         } else {
             counterText.SetFont("cLime") ; Default green
@@ -160,17 +177,16 @@ updateTimer(*) {
     ; Total time logic
     nowTick := A_TickCount
     if (!breakActive) {
-        totalTime += (nowTick - lastTotalTick)
+        currentTotalTime += (nowTick - lastTotalTick)
     }
     lastTotalTick := nowTick
     ; Display total time in hh:mm
-    totalMins := totalTime // 60000
+    totalMins := currentTotalTime // 60000
     totalHours := totalMins // 60
     totalMins := Mod(totalMins, 60)
     totalTimeText.Text := (totalHours < 10 ? "0" : "") . totalHours . ":" . (totalMins < 10 ? "0" : "") . totalMins
     ; Total time color logic
-    totalElapsed := totalHours * 3600000 + totalMins * 60000
-    if (totalTime >= 10800000) { ; 3 hours
+    if (currentTotalTime >= totalTime) { ; Check if current time has reached the 3-hour limit
         ; Flash red
         if (Mod(A_TickCount // 500, 2)) {
             totalTimeText.SetFont("cFF0000") ; Red
@@ -187,7 +203,7 @@ updateTimer(*) {
         }
         breakText.Visible := true
         breakTextAutoHide := false
-    } else if (totalTime >= 10500000) { ; 2:55
+    } else if (currentTotalTime >= totalTime - 300000) { ; Check if it's 5 minutes before the limit
         totalTimeText.SetFont("cFFFF00") ; Yellow
     } else {
         totalTimeText.SetFont("c3399FF") ; Default blue
@@ -195,22 +211,50 @@ updateTimer(*) {
 }
 
 BreakTextHandler(txt, *) {
-    global finished, breakActive, breakStart, pauseTick, pausedElapsed, breakTextAutoHide, startTick, breakText, totalTime, lastTotalTick, displayElapsed
-    if (finished)
-        return
-    breakTextAutoHide := false
+    global finished, breakActive, breakStart, pauseTick, pausedSessionTime, breakTextAutoHide, startTick, breakText, currentTotalTime, lastTotalTick, sessionTime, counterText, totalTimeText
+
+    if (breakText.Text = "Finished") {
+        return ; Ignore clicks if already finished
+    }
+
     if (breakText.Text = "Finish Up") {
-        ; Stop all timers and blinking
+        ; Stop all timers immediately
         SetTimer(updateTimer, 0)
-        SetTimer(AutoHideBreakText, 0)
         SetTimer(CheckMouseOverControls, 0)
+
+        ; Set the finished flag
         finished := true
+
+        ; Perform one final update of time values
+        if (!breakActive) {
+             currentSessionTime := Max(A_TickCount - startTick, 0)
+             currentTotalTime += (A_TickCount - lastTotalTick)
+        }
+
+        ; Format and display final session time
+        local displaySessionTime := Max(currentSessionTime, 0)
+        local mins := displaySessionTime // 60000
+        local secs := Mod(displaySessionTime // 1000, 60)
+        counterText.Text := Format("{:02}:{:02}", mins, secs)
+        counterText.SetFont("cFF0000") ; Final color: Red
+
+        ; Format and display final total time
+        local totalMins := currentTotalTime // 60000
+        local totalHours := totalMins // 60
+        totalMins := Mod(totalMins, 60)
+        totalTimeText.Text := (totalHours < 10 ? "0" : "") . totalHours . ":" . (totalMins < 10 ? "0" : "") . totalMins
+        totalTimeText.SetFont("cFF0000") ; Final color: Red
+
+        ; Update the break button
         breakText.Text := "Finished"
         breakText.Opt("Background00FF00") ; Green
         breakText.SetFont("c222222") ; Dark text
+
+        ; Set auto-close timer
         SetTimer(CloseIfFinished, 300000) ; Close after 5 minutes
         return
     }
+
     if (!breakActive) {
         breakActive := true
         breakStart := A_TickCount
@@ -223,7 +267,7 @@ BreakTextHandler(txt, *) {
         breakActive := false
         startTick := A_TickCount ; Reset timer when break ends
         lastTotalTick := A_TickCount ; Resume total time
-        pausedElapsed := 0 ; Reset pausedElapsed so timer starts from zero
+        pausedSessionTime := 0 ; Reset pausedSessionTime so timer starts from zero
         pauseTick := 0 ; Prevent startTick from being incremented again
         breakText.Text := "Take Break"
         breakText.Opt("Background808080") ; Gray
@@ -264,16 +308,12 @@ ShowBreakText() {
     breakTextAutoHide := true
 }
 
-AutoHideBreakText() {
-    ; No longer needed, logic moved to CheckMouseOverControls
-}
-
 CheckMouseOverControls() {
     global myGui, breakActive, startTick, breakText, breakTextLastShown, breakTextAutoHide, breakTextMouseOver
     if breakActive
         return
-    elapsed := A_TickCount - startTick
-    if (elapsed >= 3600000)
+    currentSessionTime := A_TickCount - startTick
+    if (currentSessionTime >= 3600000)
         return
     ; Get position and size of the GUI
     x := y := w := h := 0
@@ -301,48 +341,48 @@ CheckMouseOverControls() {
 ^Right::AddFiveMinutes()
 
 AddFiveMinutes() {
-    global startTick, totalTime, lastTotalTick
+    global startTick, currentTotalTime, lastTotalTick
     startTick -= 300000
-    totalTime += 300000
+    currentTotalTime += 300000
     lastTotalTick := A_TickCount
 }
 
 ^Left::SubtractFiveMinutes()
 
 SubtractFiveMinutes() {
-    global startTick, totalTime
+    global startTick, currentTotalTime
     newStartTick := startTick + 300000 ; Add 5 minutes (in ms) to startTick to decrement timer
-    elapsed := A_TickCount - newStartTick
-    if (elapsed < 0) {
+    currentSessionTime := A_TickCount - newStartTick
+    if (currentSessionTime < 0) {
         startTick := A_TickCount ; Clamp so timer shows 00:00
-        ; Clamp totalTime so it doesn't go below zero
-        totalTime := Max(totalTime - (A_TickCount - startTick), 0)
+        ; Clamp currentTotalTime so it doesn't go below zero
+        currentTotalTime := Max(currentTotalTime - (A_TickCount - startTick), 0)
     } else {
         startTick := newStartTick
-        totalTime := Max(totalTime - 300000, 0)
+        currentTotalTime := Max(currentTotalTime - 300000, 0)
     }
 }
 
 ^.::AddOneMinute()
 
 AddOneMinute() {
-    global startTick, totalTime
+    global startTick, currentTotalTime
     startTick -= 60000 ; Subtract 1 minute (in ms) from startTick to increment timer
-    totalTime += 60000
+    currentTotalTime += 60000
 }
 
 ^,::SubtractOneMinute()
 
 SubtractOneMinute() {
-    global startTick, totalTime
+    global startTick, currentTotalTime
     newStartTick := startTick + 60000 ; Add 1 minute (in ms) to startTick to decrement timer
-    elapsed := A_TickCount - newStartTick
-    if (elapsed < 0) {
+    currentSessionTime := A_TickCount - newStartTick
+    if (currentSessionTime < 0) {
         startTick := A_TickCount ; Clamp so timer shows 00:00
-        totalTime := Max(totalTime - (A_TickCount - startTick), 0)
+        currentTotalTime := Max(currentTotalTime - (A_TickCount - startTick), 0)
     } else {
         startTick := newStartTick
-        totalTime := Max(totalTime - 60000, 0)
+        currentTotalTime := Max(currentTotalTime - 60000, 0)
     }
 }
 
@@ -351,4 +391,30 @@ CloseIfFinished() {
     if (finished) {
         ExitApp
     }
+}
+
+^End::SetTotalToLimit()
+^Home::ResetTotalToZero()
+
+SetTotalToLimit() {
+    global currentTotalTime, totalTime
+    currentTotalTime := totalTime
+}
+
+ResetTotalToZero() {
+    global currentTotalTime
+    currentTotalTime := 0
+}
+
+^PgDn::SetSessionToLimit()
+^PgUp::ResetSessionToZero()
+
+SetSessionToLimit() {
+    global startTick, sessionTime
+    startTick := A_TickCount - sessionTime
+}
+
+ResetSessionToZero() {
+    global startTick
+    startTick := A_TickCount
 }
