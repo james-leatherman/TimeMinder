@@ -1,5 +1,7 @@
 # TimeMinder
 
+![TimeMinder Logo](images/TimeMinderLogo.png)
+
 ## Overview
 TimeMinder is an AutoHotkey (AHK) script designed to help you manage your time efficiently.
 
