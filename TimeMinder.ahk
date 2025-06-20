@@ -33,7 +33,7 @@ myGui.AddText("y+2")
 myGui.SetFont("s10 Bold cLime", "Segoe UI")
 sessionTitle := myGui.AddText("w130 h18 Center", "Session Time")
 myGui.SetFont("s18 Bold cLime", "Segoe UI")
-counterText := myGui.AddText("w130 h28 Center y+0", "00:00")
+counterText := myGui.AddText("w130 h28 Center y+0", "00:00:00")
 
 myGui.AddText("y+2")
 
@@ -41,7 +41,7 @@ myGui.AddText("y+2")
 myGui.SetFont("s10 cGray", "Segoe UI")
 clockTitle := myGui.AddText("w130 h18 Center", "Current Time")
 myGui.SetFont("s18 cGray", "Segoe UI")
-clockText := myGui.AddText("w130 h28 Center y+0", "00:00")
+clockText := myGui.AddText("w130 h28 Center y+0", "00:00:00")
 
 myGui.AddText("y+2")
 
@@ -49,7 +49,7 @@ myGui.AddText("y+2")
 myGui.SetFont("s10 Bold c3399FF", "Segoe UI")
 totalTitle := myGui.AddText("w130 h18 Center", "Total Time")
 myGui.SetFont("s18 c3399FF Bold", "Segoe UI")
-totalTimeText := myGui.AddText("w130 h28 Center y+0", "00:00")
+totalTimeText := myGui.AddText("w130 h28 Center y+0", "00:00:00")
 
 lastTotalTick := A_TickCount
 
@@ -133,9 +133,14 @@ updateTimer(*) {
     }
     ; Only clamp display, not elapsed
     displaySessionTime := Max(currentSessionTime, 0)
-    mins := displaySessionTime // 60000
+    hours := displaySessionTime // 3600000
+    mins := Mod(displaySessionTime // 60000, 60)
     secs := Mod(displaySessionTime // 1000, 60)
-    counterText.Text := Format("{:02}:{:02}", mins, secs)
+    if (hours > 0) {
+        counterText.Text := Format("{:02}:{:02}:{:02}", hours, mins, secs)
+    } else {
+        counterText.Text := Format("{:02}:{:02}", mins, secs)
+    }
     
     ; 12-hour clock with AM/PM
     hour := SubStr(A_Now, 9, 2) + 0
@@ -176,15 +181,18 @@ updateTimer(*) {
     }
     ; Total time logic
     nowTick := A_TickCount
-    if (!breakActive) {
-        currentTotalTime += (nowTick - lastTotalTick)
-    }
+    currentTotalTime += (nowTick - lastTotalTick)
     lastTotalTick := nowTick
-    ; Display total time in hh:mm
-    totalMins := currentTotalTime // 60000
-    totalHours := totalMins // 60
-    totalMins := Mod(totalMins, 60)
-    totalTimeText.Text := (totalHours < 10 ? "0" : "") . totalHours . ":" . (totalMins < 10 ? "0" : "") . totalMins
+    ; Display total time in hh:mm:ss or mm:ss
+    totalSecs := currentTotalTime // 1000
+    totalHours := totalSecs // 3600
+    totalMins := Mod(totalSecs // 60, 60)
+    totalSecs := Mod(totalSecs, 60)
+    if (totalHours > 0) {
+        totalTimeText.Text := Format("{:02}:{:02}:{:02}", totalHours, totalMins, totalSecs)
+    } else {
+        totalTimeText.Text := Format("{:02}:{:02}", totalMins, totalSecs)
+    }
     ; Total time color logic
     if (currentTotalTime >= totalTime) { ; Check if current time has reached the 3-hour limit
         ; Flash red
@@ -239,10 +247,15 @@ BreakTextHandler(txt, *) {
         counterText.SetFont("cFF0000") ; Final color: Red
 
         ; Format and display final total time
-        local totalMins := currentTotalTime // 60000
-        local totalHours := totalMins // 60
-        totalMins := Mod(totalMins, 60)
-        totalTimeText.Text := (totalHours < 10 ? "0" : "") . totalHours . ":" . (totalMins < 10 ? "0" : "") . totalMins
+        local totalSecs := currentTotalTime // 1000
+        local totalHours := totalSecs // 3600
+        local totalMins := Mod(totalSecs // 60, 60)
+        local totalSecs := Mod(totalSecs, 60)
+        if (totalHours > 0) {
+            totalTimeText.Text := Format("{:02}:{:02}:{:02}", totalHours, totalMins, totalSecs)
+        } else {
+            totalTimeText.Text := Format("{:02}:{:02}", totalMins, totalSecs)
+        }
         totalTimeText.SetFont("cFF0000") ; Final color: Red
 
         ; Update the break button
