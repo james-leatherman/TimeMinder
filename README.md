@@ -5,6 +5,7 @@
 ## Overview
 TimeMinder is a lightweight, customizable timer designed to help you manage your work and break intervals effectively. Built with AutoHotkey v2, it provides a simple, always-on-top interface to keep you mindful of your screen time.
 
+
 ---
 
 ## Features
@@ -16,16 +17,34 @@ TimeMinder is a lightweight, customizable timer designed to help you manage your
 
 ---
 
+## Screenshots
+
+| Start | Unscheduled Break | Scheduled Break |
+|---|---|---|
+| ![Start](images/start.jpg) | ![Unscheduled Break](images/unsched-break.jpg) | ![Scheduled Break](images/sched-break.jpg) |
+
+| On Break | Back from Break | End of Day |
+|---|---|---|
+| ![On Break](images/on-break.jpg) | ![Back from Break](images/back-from-break.jpg) | ![End of Day](images/end-of-day.jpg) |
+
+| Day is Done |
+|---|
+| ![Day is Done](images/day-is-done.jpg) |
+
+---
+
 ## Getting Started
 
 You have three options to get started with TimeMinder:
 
-### Option 1: Download the EXE (Recommended)
+### Option 1: Download the EXE
 For a plug-and-play experience without any dependencies, download the compiled `.exe` file.
 
 - **[Download TimeMinder.exe](https://github.com/USERNAME/TimeMinder/releases/latest/download/TimeMinder.exe)**
 
 Simply run the downloaded file to start the timer.
+
+*Note: This will trigger Windows Defender.*
 
 ### Option 2: Download the Script
 If you have AutoHotkey v2 installed, you can download the script file directly.
