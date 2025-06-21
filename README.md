@@ -3,62 +3,66 @@
 ![TimeMinder Logo](images/TimeMinderLogo.png)
 
 ## Overview
-TimeMinder is an AutoHotkey (AHK) script designed to help you manage your screen time.
+TimeMinder is a lightweight, customizable timer designed to help you manage your work and break intervals effectively. Built with AutoHotkey v2, it provides a simple, always-on-top interface to keep you mindful of your screen time.
+
+---
+
+## Features
+- **Customizable Timers:** Set session, break, and total time limits via command line.
+- **Always-On-Top:** The timer window stays visible over other applications.
+- **Visual Alerts:** The timer changes color and flashes to notify you when it's time for a break or to wrap up.
+- **Draggable Interface:** Click and drag the timer anywhere on your screen.
+- **Hotkey Support:** Adjust timers, start/end breaks, and quit the app with keyboard shortcuts.
+
+---
+
+## Getting Started
+
+You have three options to get started with TimeMinder:
+
+### Option 1: Download the EXE (Recommended)
+For a plug-and-play experience without any dependencies, download the compiled `.exe` file.
+
+- **[Download TimeMinder.exe](https://github.com/USERNAME/TimeMinder/releases/latest/download/TimeMinder.exe)**
+
+Simply run the downloaded file to start the timer.
+
+### Option 2: Download the Script
+If you have AutoHotkey v2 installed, you can download the script file directly.
+
+- **[Download TimeMinder.ahk](TimeMinder.ahk?raw=true)**
+
+Run the script by right-clicking it and selecting `Run with AutoHotkey`, or run it from the command line.
+
+### Option 3: Clone the Repository
+To get the full source code, including the logo and README, clone the repository using Git.
+
+```sh
+git clone https://github.com/USERNAME/TimeMinder.git
+cd TimeMinder
+```
 
 ---
 
 ## Prerequisites
+If you choose to use the `.ahk` script (Option 2 or 3), you will need:
 - **Windows OS**
-- **AutoHotkey v2**
+- **[AutoHotkey v2](https://www.autohotkey.com/v2/)**
 
 ---
 
-## Installation
+## How to Run the Script
 
-1. **Download and Install AutoHotkey**
-   - Visit the official AutoHotkey website: [https://www.autohotkey.com/](https://www.autohotkey.com/)
-   - Click the **Download** button and follow the installation instructions for AutoHotkey v2.
-
-2. **Clone or Download this Repository**
-   - Download or clone this repository to your local machine.
-
----
-
-## Running the Script
-
-1. **Open PowerShell or Command Prompt**
-2. **Navigate to the script directory:**
-   ```powershell
-   cd "C:\Users\james\Documents\GitHub\TimeMinder"
-   ```
+1. **Open PowerShell or Command Prompt.**
+2. **Navigate to the script's directory.**
 3. **Run the script using AutoHotkey:**
-   - If you installed AutoHotkey to the default location, use:
-     ```powershell
-     & "C:\Program Files\AutoHotkey\v2\AutoHotkey.exe" "TimeMinder.ahk"
-     ```
-   - If AutoHotkey is installed elsewhere, adjust the path accordingly.
+   ```powershell
+   # If AutoHotkey is in your system's PATH
+   AutoHotkey.exe TimeMinder.ahk
 
----
-
-## Notes
-- You can also run the script by right-clicking `TimeMinder.ahk` and selecting **Run with AutoHotkey**.
-- For advanced usage or passing arguments, append them after the script name:
-  ```powershell
-  & "C:\Program Files\AutoHotkey\v2\AutoHotkey.exe" "TimeMinder.ahk" arg1 arg2
-  ```
-
----
-
-## Usage
-
-- **Drag the Window:**
-  - Click and hold on any text area (timer, clock, or labels) to drag the TimeMinder window to your preferred location.
-
-- **Start a Break:**
-  - When the session timer reaches zero or at any time, hover over the timer and click the "Take Break" button to begin your break.
-
-- **End a Break:**
-  - Click the green "On Break" button to end your break and resume your session timer.
+   # Or provide the full path
+   & "C:\Program Files\AutoHotkey\v2\AutoHotkey.exe" "TimeMinder.ahk"
+   ```
 
 ---
 
@@ -66,41 +70,47 @@ TimeMinder is an AutoHotkey (AHK) script designed to help you manage your screen
 
 You can customize the timer durations by passing up to three arguments (in minutes) when launching the script:
 
-```
-& "C:\Program Files\AutoHotkey\v2\AutoHotkey.exe" "TimeMinder.ahk" [sessionTime] [breakTime] [totalTime]
+```powershell
+# For the .exe
+TimeMinder.exe [sessionTime] [breakTime] [totalTime]
+
+# For the .ahk script
+AutoHotkey.exe TimeMinder.ahk [sessionTime] [breakTime] [totalTime]
 ```
 
-- `sessionTime` (optional): Length of a work/play session in minutes. **Default:** 30
-- `breakTime` (optional): Length of a break in minutes. **Default:** 10
-- `totalTime` (optional): Total time before "Finish Up" warning in minutes. **Default:** 180 (3 hours)
+| Argument      | Description                                     | Default |
+|---------------|-------------------------------------------------|---------|
+| `sessionTime` | Length of a work session in minutes.            | 30      |
+| `breakTime`   | Length of a break in minutes.                   | 10      |
+| `totalTime`   | Total time before "Finish Up" warning (in minutes). | 180     |
 
 **Examples:**
 - 25-minute sessions, 5-minute breaks, 2-hour total:
   ```powershell
-  & "C:\Program Files\AutoHotkey\v2\AutoHotkey.exe" "TimeMinder.ahk" 25 5 120
+  TimeMinder.exe 25 5 120
   ```
-- 50-minute sessions, default break and total:
+- 50-minute sessions with default break and total times:
   ```powershell
-  & "C:\Program Files\AutoHotkey\v2\AutoHotkey.exe" "TimeMinder.ahk" 50
+  TimeMinder.exe 50
   ```
 
 ---
 
-## Hotkey Usage
+## Hotkeys
 
 While TimeMinder is running, you can use the following keyboard shortcuts:
 
 | Hotkey           | Action                        |
 |------------------|-------------------------------|
-| Ctrl + Right     | Add 5 minutes to session      |
-| Ctrl + Left      | Subtract 5 minutes from session|
-| Ctrl + .         | Add 1 minute to session       |
-| Ctrl + ,         | Subtract 1 minute from session|
-| Ctrl + PgDn      | Set session time to limit     |
-| Ctrl + PgUp      | Reset session time to zero    |
-| Ctrl + End       | Set total time to limit       |
-| Ctrl + Home      | Reset total time to zero      |
-| Ctrl + Q         | Quit the app                  |
+| `Ctrl` + `Right` | Add 5 minutes to the session  |
+| `Ctrl` + `Left`  | Subtract 5 minutes from the session |
+| `Ctrl` + `.`     | Add 1 minute to the session   |
+| `Ctrl` + `,`     | Subtract 1 minute from the session |
+| `Ctrl` + `PgDn`  | Set session time to its limit |
+| `Ctrl` + `PgUp`  | Reset session time to zero    |
+| `Ctrl` + `End`   | Set total time to its limit   |
+| `Ctrl` + `Home`  | Reset total time to zero      |
+| `Ctrl` + `Q`     | Quit the application          |
 
 ---
 
