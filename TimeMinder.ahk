@@ -180,9 +180,11 @@ updateTimer(*) {
         counterText.SetFont("cLime") ; Default green during break
     }
     ; Total time logic
-    nowTick := A_TickCount
-    currentTotalTime += (nowTick - lastTotalTick)
-    lastTotalTick := nowTick
+    if (!breakActive) {
+        nowTick := A_TickCount
+        currentTotalTime += (nowTick - lastTotalTick)
+        lastTotalTick := nowTick
+    }
     ; Display total time in hh:mm:ss or mm:ss
     totalSecs := currentTotalTime // 1000
     totalHours := totalSecs // 3600
