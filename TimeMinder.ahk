@@ -1,8 +1,8 @@
 #Requires AutoHotkey v2.0
 
 ; Parse command line arguments
-sessionTime := 1800000 ; Default: 30 minutes
-breakTime := 600000 ; Default: 10 minutes
+sessionTime := 3600000 ; Default: 60 minutes
+breakTime := 1800000 ; Default: 30 minutes
 totalTime := 10800000 ; Default: 180 minutes (3 hours)
 
 ; Check for command line arguments
@@ -51,6 +51,8 @@ totalTitle := myGui.AddText("w130 h18 Center", "Total Time")
 myGui.SetFont("s18 c3399FF Bold", "Segoe UI")
 totalTimeText := myGui.AddText("w130 h28 Center y+0", "00:00:00")
 
+myGui.AddText("y+2")
+
 lastTotalTick := A_TickCount
 
 myGui.SetFont("s12 Bold", "Segoe UI")
@@ -81,14 +83,36 @@ SetTimer(CheckMouseOverControls, 100)
 
 finished := false
 
+; --- Beep Notification Flags ---
+sessionBeepActive := false
+totalBeepActive := false
+
+; --- Beep Notification Function ---
+BeepNotification(*) {
+    global customSoundPath
+    if (customSoundPath != "") {
+        try {
+            SoundPlay customSoundPath
+        } catch {
+            SoundBeep 1500, 500 ; fallback if sound file fails
+        }
+    } else {
+        SoundBeep 1500, 500 ; 1500 Hz, 500 ms
+    }
+}
+
 updateTimer(*) {
     global finished, startTick, counterText, clockText, breakText, breakActive, breakStart, flashTimer, pausedSessionTime, pauseTick, breakTextLastShown, breakTextAutoHide, myGui, currentTotalTime, lastTotalTick, totalTimeText, sessionTime, isFirstTick
+    global sessionBeepActive, totalBeepActive
     if (finished) {
         return
     }
     if (isFirstTick) {
         currentSessionTime := 0
         isFirstTick := false
+        sessionBeepActive := false
+        totalBeepActive := false
+        SetTimer(BeepNotification, 0) ; Stop any beep
     }
     if breakActive {
         currentSessionTime := pausedSessionTime
@@ -99,10 +123,17 @@ updateTimer(*) {
         } else {
             breakText.Visible := true
         }
-        breakText.Text := "On Break"
+        ; Show break countdown timer
+        breakElapsed := Max(A_TickCount - breakStart, 0)
+        breakMins := breakElapsed // 60000
+        breakSecs := Mod(breakElapsed // 1000, 60)
+        breakText.Text := Format("Break: {:02}:{:02}", breakMins, breakSecs)
         breakText.Opt("Background00FF00") ; Green
         breakText.SetFont("c222222") ; Dark text
         breakTextAutoHide := false
+        sessionBeepActive := false
+        totalBeepActive := false
+        SetTimer(BeepNotification, 0) ; Stop beep
     } else {
         if (pauseTick) {
             startTick += (A_TickCount - pauseTick)
@@ -122,12 +153,23 @@ updateTimer(*) {
             breakText.Text := "Take Break"
             breakText.Visible := true
             breakTextAutoHide := false
+            ; --- Start session beep if not already active ---
+            if (!sessionBeepActive) {
+                SetTimer(BeepNotification, 15000) ; Every 15 seconds
+                BeepNotification() ; Immediate beep
+                sessionBeepActive := true
+            }
         } else {
             breakText.Text := "Take Break"
             breakText.Opt("Background808080") ; Gray
             breakText.SetFont("cFFFFFF") ; White text
             if (!breakText.Visible) {
                 ; Only show if hover logic triggers
+            }
+            ; --- Stop session beep if timer is reset ---
+            if (sessionBeepActive) {
+                SetTimer(BeepNotification, 0)
+                sessionBeepActive := false
             }
         }
     }
@@ -213,15 +255,31 @@ updateTimer(*) {
         }
         breakText.Visible := true
         breakTextAutoHide := false
+        ; --- Start total beep if not already active ---
+        if (!totalBeepActive) {
+            SetTimer(BeepNotification, 15000) ; Every 15 seconds
+            BeepNotification() ; Immediate beep
+            totalBeepActive := true
+        }
     } else if (currentTotalTime >= totalTime - 300000) { ; Check if it's 5 minutes before the limit
         totalTimeText.SetFont("cFFFF00") ; Yellow
+        ; --- Stop total beep if timer is reset ---
+        if (totalBeepActive) {
+            SetTimer(BeepNotification, 0)
+            totalBeepActive := false
+        }
     } else {
         totalTimeText.SetFont("c3399FF") ; Default blue
+        if (totalBeepActive) {
+            SetTimer(BeepNotification, 0)
+            totalBeepActive := false
+        }
     }
 }
 
 BreakTextHandler(txt, *) {
     global finished, breakActive, breakStart, pauseTick, pausedSessionTime, breakTextAutoHide, startTick, breakText, currentTotalTime, lastTotalTick, sessionTime, counterText, totalTimeText
+    global sessionBeepActive, totalBeepActive
 
     if (breakText.Text = "Finished") {
         return ; Ignore clicks if already finished
@@ -288,6 +346,13 @@ BreakTextHandler(txt, *) {
         breakText.Opt("Background808080") ; Gray
         breakText.SetFont("cFFFFFF") ; White text
         ; Do not reset totalTime
+    }
+
+    ; --- Stop beep when button is clicked ---
+    if (sessionBeepActive || totalBeepActive) {
+        SetTimer(BeepNotification, 0)
+        sessionBeepActive := false
+        totalBeepActive := false
     }
 }
 
@@ -432,4 +497,43 @@ SetSessionToLimit() {
 ResetSessionToZero() {
     global startTick
     startTick := A_TickCount
+}
+
+^]::IncrementBreakElapsed()
+^[::DecrementBreakElapsed()
+
+IncrementBreakElapsed() {
+    global breakActive, breakStart
+    if (breakActive) {
+        breakStart -= 60000 ; Subtract 1 minute from breakStart (so elapsed increases by 1 min)
+    }
+}
+
+DecrementBreakElapsed() {
+    global breakActive, breakStart
+    if (breakActive) {
+        newBreakStart := breakStart + 60000 ; Add 1 minute to breakStart (so elapsed decreases by 1 min)
+        elapsed := A_TickCount - newBreakStart
+        if (elapsed < 0) {
+            breakStart := A_TickCount ; Clamp so timer shows 00:00
+        } else {
+            breakStart := newBreakStart
+        }
+    }
+}
+
+^+s::SetCustomSound()
+
+customSoundPath := ""
+
+SetCustomSound() {
+    global customSoundPath
+    file := FileSelect(1, , "Select a sound file", "Audio Files (*.wav;*.mp3;*.wma;*.aac;*.m4a;*.flac)")
+    if (file != "") {
+        customSoundPath := file
+        MsgBox "Custom sound set!"
+    } else {
+        customSoundPath := ""
+        MsgBox "Custom sound cleared. Default beep will be used."
+    }
 }

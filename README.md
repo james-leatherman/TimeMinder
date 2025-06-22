@@ -9,11 +9,14 @@ TimeMinder is a lightweight, customizable timer designed to help you manage your
 ---
 
 ## Features
-- **Customizable Timers:** Set session, break, and total time limits via command line.
+- **Customizable Timers:** Set session, break, and total time limits via command line. Defaults: 60 min session, 30 min break, 180 min total.
 - **Always-On-Top:** The timer window stays visible over other applications.
 - **Visual Alerts:** The timer changes color and flashes to notify you when it's time for a break or to wrap up.
 - **Draggable Interface:** Click and drag the timer anywhere on your screen.
 - **Hotkey Support:** Adjust timers, start/end breaks, and quit the app with keyboard shortcuts.
+- **Break Timer Display:** When on break, the break button shows a live-updating timer of elapsed break time.
+- **Notification Sounds:** When session or total time elapses, a notification sound will play every 15 seconds until you click the break/finish button. You can set a custom sound file (WAV, MP3, etc) or use the default beep.
+- **Custom Sound Hotkey:** Press Ctrl+Shift+S to set or clear a custom notification sound.
 
 ---
 
@@ -23,13 +26,11 @@ TimeMinder is a lightweight, customizable timer designed to help you manage your
 |---|---|---|
 | ![Start](images/start.jpg) | ![Unscheduled Break](images/unsched-break.jpg) | ![Scheduled Break](images/sched-break.jpg) |
 
-| On Break | Back from Break | End of Day |
+| On Break  | End of Day | Day is Done |
 |---|---|---|
-| ![On Break](images/on-break.jpg) | ![Back from Break](images/back-from-break.jpg) | ![End of Day](images/end-of-day.jpg) |
+| ![On Break](images/on-break.jpg) | ![End of Day](images/end-of-day.jpg) | ![Day is Done](images/day-is-done.jpg) |
 
-| Day is Done |
-|---|
-| ![Day is Done](images/day-is-done.jpg) |
+
 
 ---
 
@@ -130,6 +131,9 @@ While TimeMinder is running, you can use the following keyboard shortcuts:
 | `Ctrl` + `End`   | Set total time to its limit   |
 | `Ctrl` + `Home`  | Reset total time to zero      |
 | `Ctrl` + `Q`     | Quit the application          |
+| `Ctrl` + `]`     | Add 1 minute to elapsed break time (if on break) |
+| `Ctrl` + `[`     | Subtract 1 minute from elapsed break time (if on break) |
+| `Ctrl` + `Shift` + `S` | Set or clear a custom notification sound |
 
 ---
 
