@@ -41,7 +41,7 @@ You have three options to get started with TimeMinder:
 ### Option 1: Download the EXE
 For a plug-and-play experience without any dependencies, download the compiled `.exe` file.
 
-- **[Download TimeMinder.exe](https://github.com/USERNAME/TimeMinder/releases/latest/download/TimeMinder.exe)**
+- **[Download TimeMinder.exe](https://github.com/james-leatherman/TimeMinder/releases/latest/download/TimeMinder.exe)**
 
 Simply run the downloaded file to start the timer.
 
