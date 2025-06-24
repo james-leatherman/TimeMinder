@@ -1,151 +1,122 @@
-# TimeMinder Build & Distribution Script
+# TimeMinder Build Script
 #
 # Default (no parameters): Builds TimeMinder.exe to the project root.
-# Usage: .\build\build.ps1 [-Compress]
+# Usage: .\build\build.ps1
 #
-# Distribution Mode: Creates a complete, versioned distribution package.
-# Usage: .\build\build.ps1 -Distribution [-Version "1.0"] [-Architecture "64"]
+# Distribution Mode: Creates a complete distribution package in the /dist folder.
+# Usage: .\build\build.ps1 -Distribution
 
 param(
-    # --- General Parameters ---
-    [string]$Architecture = "64",
-    [switch]$Compress,
-
-    # --- Distribution Parameters ---
-    [switch]$Distribution,
-    [string]$Version = "1.0"
+    [switch]$Distribution
 )
 
-# --- Function Definitions ---
-
-function Build-Executable {
-    param(
-        [string]$Architecture,
-        [switch]$Compress
-    )
-    $OutputName = "TimeMinder.exe"
-
-    Write-Host "Building TimeMinder Executable..." -ForegroundColor Green
-    Write-Host "Architecture: $Architecture-bit" -ForegroundColor Cyan
-    Write-Host "Compression: $(if ($Compress) { 'Enabled' } else { 'Disabled' })" -ForegroundColor Cyan
-    Write-Host "Output: $OutputName" -ForegroundColor Cyan
-
-    $CmdArgs = @("/silent", "/in", $SourceFile, "/out", $OutputName, "/bin", $Architecture)
-    if ((Test-Path $IconFile)) {
-        $CmdArgs += @("/icon", $IconFile)
-    }
-    if ($Compress) {
-        $CmdArgs += @("/compress", "1")
-    }
-
-    Write-Host "Command: $Ahk2ExePath $($CmdArgs -join ' ')" -ForegroundColor Gray
-    Invoke-Command -Command $Ahk2ExePath -Args $CmdArgs
-}
-
-function Create-Distribution {
-    param(
-        [string]$Version,
-        [string]$Architecture,
-        [switch]$Compress
-    )
-
-    # Distribution settings
-    $DistDir = "TimeMinder_v$Version"
-    $ExeName = "TimeMinder_v$Version.exe"
-    $ZipName = "TimeMinder_v$Version.zip"
-    $DistExePath = "$DistDir\$ExeName"
-
-    Write-Host "Creating TimeMinder Distribution v$Version" -ForegroundColor Green
-    
-    # Clean previous distribution
-    if (Test-Path $DistDir) {
-        Write-Host "Cleaning previous distribution..." -ForegroundColor Yellow
-        Remove-Item $DistDir -Recurse -Force
-    }
-    if (Test-Path $ZipName) {
-        Remove-Item $ZipName -Force
-    }
-
-    # Create directory structure
-    Write-Host "Creating distribution directory..." -ForegroundColor Cyan
-    New-Item -ItemType Directory -Path $DistDir | Out-Null
-    New-Item -ItemType Directory -Path "$DistDir\sounds" | Out-Null
-    New-Item -ItemType Directory -Path "$DistDir\images" | Out-Null
-
-    # Compile executable
-    Write-Host "Compiling TimeMinder..." -ForegroundColor Cyan
-    $CmdArgs = @("/silent", "/in", $SourceFile, "/out", $DistExePath, "/bin", $Architecture)
-    if ((Test-Path $IconFile)) {
-        $CmdArgs += @("/icon", $IconFile)
-    }
-    if ($Compress) {
-        $CmdArgs += @("/compress", "1")
-    }
-    
-    Write-Host "Build command: $Ahk2ExePath $($CmdArgs -join ' ')" -ForegroundColor Gray
-    Invoke-Command -Command $Ahk2ExePath -Args $CmdArgs
-    
-    # Copy supporting files
-    Write-Host "Copying supporting files..." -ForegroundColor Cyan
-    Copy-Item "sounds\*" "$DistDir\sounds\" -Recurse -Force
-    Copy-Item "images\*" "$DistDir\images\" -Recurse -Force
-    Copy-Item "README.md" "$DistDir\" -Force
-
-    # Create ZIP archive
-    Write-Host "Creating ZIP archive..." -ForegroundColor Cyan
-    Compress-Archive -Path $DistDir -DestinationPath $ZipName -CompressionLevel Optimal
-
-    Write-Host "`nDistribution created successfully!" -ForegroundColor Green
-    Write-Host "Output Folder: $DistDir" -ForegroundColor Cyan
-    Write-Host "ZIP Archive: $ZipName" -ForegroundColor Cyan
-}
-
-function Invoke-Command {
-    param([string]$Command, [array]$Args)
-    try {
-        # Temporarily change to the project root to run the command
-        Push-Location ".."
-        & $Command $Args
-        Start-Sleep -Seconds 2 # Allow time for file I/O to complete
-        Pop-Location
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "ERROR: Operation failed with exit code: $LASTEXITCODE" -ForegroundColor Red
-            exit 1
-        }
-        Write-Host "Operation successful!" -ForegroundColor Green
-    } catch {
-        Write-Host "ERROR: Operation failed with error: $($_.Exception.Message)" -ForegroundColor Red
-        exit 1
-    }
-}
-
 # --- Configuration ---
+# Get the directory of the script itself
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$Ahk2ExePath = "C:\Program Files\AutoHotkey\Compiler\Ahk2Exe.exe" # Use the system-standard compiler
-$SourceFile = "TimeMinder.ahk"
-$IconFile = "images\TimeMinderIcon.ico"
 
+# Define project root relative to the script's location
+$ProjectRoot = Resolve-Path -Path (Join-Path -Path $ScriptDir -ChildPath "..")
+
+# Define all paths relative to the project root
+$SourceFile = Join-Path -Path $ProjectRoot -ChildPath "TimeMinder.ahk"
+$IconFile = Join-Path -Path $ProjectRoot -ChildPath "images\TimeMinderIcon.ico"
+$OutputFile = Join-Path -Path $ProjectRoot -ChildPath "TimeMinder.exe"
+$DistributionFolder = Join-Path -Path $ProjectRoot -ChildPath "dist"
+
+# Define potential compiler paths
+$CompilerPaths = @(
+    "C:\Program Files\AutoHotkey\v2\Compiler\Ahk2Exe.exe",
+    "C:\Program Files\AutoHotkey\Compiler\Ahk2Exe.exe"
+)
 
 # --- Prerequisite Checks ---
-if (!(Test-Path $Ahk2ExePath)) {
-    Write-Host "ERROR: Ahk2Exe not found at: $Ahk2ExePath" -ForegroundColor Red
-    Write-Host "Please install AutoHotkey with the compiler component or update the path in this script." -ForegroundColor Yellow
+
+# Find the AutoHotkey compiler
+$Ahk2ExePath = $null
+foreach ($path in $CompilerPaths) {
+    if (Test-Path $path) {
+        $Ahk2ExePath = $path
+        Write-Host "Found Ahk2Exe.exe at: $Ahk2ExePath"
+        break
+    }
+}
+
+if (-not $Ahk2ExePath) {
+    Write-Error "Could not find Ahk2Exe.exe in any of the expected locations. Please install AutoHotkey v2 or update the path in this script."
     exit 1
 }
 
-if (!(Test-Path $SourceFile)) {
-    Write-Host "ERROR: Source file not found: $SourceFile" -ForegroundColor Red
+# Check for source file
+if (-not (Test-Path $SourceFile)) {
+    Write-Error "Source file not found: $SourceFile"
     exit 1
 }
 
+# --- Build Logic ---
 
-# --- Main Logic ---
+# Clean up previous build executable
+if (Test-Path $OutputFile) {
+    Remove-Item -Path $OutputFile -Force
+    Write-Host "Removed old executable: $OutputFile"
+}
+
+# Set up compiler arguments
+$CompilerArgs = @(
+    "/in", "`"$SourceFile`"",
+    "/out", "`"$OutputFile`"",
+    "/icon", "`"$IconFile`"",
+    "/base", "`"C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`"",
+    "/silent"
+)
+
+# Change to the project root directory for the build process
+Push-Location $ProjectRoot
+
+Write-Host "Current directory: $(Get-Location)"
+Write-Host "Compiling TimeMinder.ahk..."
+Write-Host "Running command: & `"$Ahk2ExePath`" $($CompilerArgs -join ' ')"
+
+# Execute the compiler
+& $Ahk2ExePath $CompilerArgs
+
+# Wait a moment for the file to be written
+Start-Sleep -Seconds 3
+
+# Return to the original directory
+Pop-Location
+
+# Verify that the executable was created
+if (-not (Test-Path $OutputFile)) {
+    Write-Error "Build failed. The output file was not created. Try running the command manually to see compiler errors."
+    exit 1
+}
+
+Write-Host "Build successful! $OutputFile created." -ForegroundColor Green
+
+
+# --- Distribution Logic ---
+
 if ($Distribution) {
-    # --- DISTRIBUTION MODE ---
-    Create-Distribution -Version $Version -Architecture $Architecture -Compress:$Compress
-}
-else {
-    # --- SIMPLE BUILD MODE ---
-    Build-Executable -Architecture $Architecture -Compress:$Compress
+    Write-Host "Creating distribution package..."
+
+    # Clean up old distribution folder
+    if (Test-Path $DistributionFolder) {
+        Remove-Item -Path $DistributionFolder -Recurse -Force
+        Write-Host "Removed old distribution folder: $DistributionFolder"
+    }
+    
+    # Create the distribution folder structure
+    New-Item -Path $DistributionFolder -ItemType Directory -Force | Out-Null
+    $SoundsDestination = Join-Path -Path $DistributionFolder -ChildPath "sounds"
+    New-Item -Path $SoundsDestination -ItemType Directory -Force | Out-Null
+
+    # Move the executable to the distribution folder
+    Move-Item -Path $OutputFile -Destination $DistributionFolder -Force
+    
+    # Copy supporting files
+    $SoundsSource = Join-Path -Path $ProjectRoot -ChildPath "sounds"
+    Copy-Item -Path (Join-Path -Path $SoundsSource -ChildPath "quack.mp3") -Destination $SoundsDestination -Force
+    Copy-Item -Path (Join-Path -Path $ProjectRoot -ChildPath "README.md") -Destination $DistributionFolder -Force
+    
+    Write-Host "Distribution package created successfully in $DistributionFolder" -ForegroundColor Green
 } 
