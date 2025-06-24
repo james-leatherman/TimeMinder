@@ -1,3 +1,5 @@
+#define SourcePath ".."
+
 [Setup]
 AppName=TimeMinder
 AppVersion=1.0
@@ -9,10 +11,10 @@ Compression=lzma
 SolidCompression=yes
 
 [Files]
-Source: "../TimeMinder.exe"; DestDir: "{app}"
-Source: "../images/*"; DestDir: "{app}/images"; Flags: recursesubdirs createallsubdirs
-Source: "../sounds/*"; DestDir: "{app}/sounds"; Flags: recursesubdirs createallsubdirs
-Source: "../README.md"; DestDir: "{app}"
+Source: "{#SourcePath}\TimeMinder.exe"; DestDir: "{app}"
+Source: "{#SourcePath}\images\*"; DestDir: "{app}\images"; Flags: recursesubdirs createallsubdirs
+Source: "{#SourcePath}\sounds\*"; DestDir: "{app}\sounds"; Flags: recursesubdirs createallsubdirs
+Source: "{#SourcePath}\README.md"; DestDir: "{app}"
 
 [Icons]
 Name: "{group}\TimeMinder"; Filename: "{app}\TimeMinder.exe"
