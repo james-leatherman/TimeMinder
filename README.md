@@ -195,39 +195,40 @@ If you want to build TimeMinder from source or create your own distribution:
 #### Quick Build
 
 1. **Install AHK2EXE**:
-   - Download from [https://www.autohotkey.com/download/](https://www.autohotkey.com/download/)
+   - Download from [https://github.com/AutoHotkey/Ahk2Exe/releases](https://github.com/AutoHotkey/Ahk2Exe/releases)
+   - Download `Ahk2Exe.zip` from the latest release
    - Extract to `C:\Tools\Ahk2Exe\`
 
 2. **Build TimeMinder**:
    ```powershell
    # Basic build
-   .\build.ps1
+   .\build\build.ps1
 
    # Build with compression (smaller file)
-   .\build.ps1 -Compress
+   .\build\build.ps1 -Compress
 
    # Create complete distribution
-   .\create_distribution.ps1
+   .\build\create_distribution.ps1
    ```
 
 #### Build Options
 
 ```powershell
 # 32-bit version
-.\build.ps1 -Architecture 32
+.\build\build.ps1 -Architecture 32
 
 # Custom output name
-.\build.ps1 -OutputName "TimeMinder_v1.0.exe"
+.\build\build.ps1 -OutputName "TimeMinder_v1.0.exe"
 
 # Complete distribution with version
-.\create_distribution.ps1 -Version "1.1" -Compress
+.\build\create_distribution.ps1 -Version "1.1" -Compress
 ```
 
 #### Alternative Build Methods
 
 ```cmd
 # Using batch script
-.\build.bat
+.\build\build.bat
 
 # Manual compilation
 "C:\Tools\Ahk2Exe\Ahk2Exe.exe" /in TimeMinder.ahk /out TimeMinder.exe /icon images\TimeMinderIcon.ico /bin 64 /compress 1
