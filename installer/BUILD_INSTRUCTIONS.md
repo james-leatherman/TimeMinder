@@ -104,3 +104,70 @@ The distribution package includes:
 - Configuration files (created on first run)
 
 Users can run TimeMinder without installing AutoHotkey! 
+
+## Inno Setup
+
+### 1. Download and Install Inno Setup
+
+- Go to: https://jrsoftware.org/isinfo.php
+- Download and install Inno Setup on your Windows machine.
+
+### 2. Prepare Your Files
+
+Make sure your build output and all required files are in a single folder, e.g.:
+```
+TimeMinder\
+  TimeMinder.exe
+  images\
+  sounds\
+  README.md
+  SOUND_MANAGEMENT.md
+```
+(You can use your distribution folder or create a new one for the installer.)
+
+### 3. Create the Inno Setup Script
+
+Here's a script tailored for your project. Save this as `TimeMinder.iss` in your project root:
+
+```inno
+[Setup]
+AppName=TimeMinder
+AppVersion=1.0
+DefaultDirName={pf}\TimeMinder
+DefaultGroupName=TimeMinder
+OutputDir=.
+OutputBaseFilename=TimeMinderSetup
+Compression=lzma
+SolidCompression=yes
+
+[Files]
+Source: "TimeMinder.exe"; DestDir: "{app}"
+Source: "images\*"; DestDir: "{app}\images"; Flags: recursesubdirs createallsubdirs
+Source: "sounds\*"; DestDir: "{app}\sounds"; Flags: recursesubdirs createallsubdirs
+Source: "README.md"; DestDir: "{app}"
+Source: "SOUND_MANAGEMENT.md"; DestDir: "{app}"
+
+[Icons]
+Name: "{group}\TimeMinder"; Filename: "{app}\TimeMinder.exe"
+Name: "{userdesktop}\TimeMinder"; Filename: "{app}\TimeMinder.exe"; Tasks: desktopicon
+
+[Tasks]
+Name: "desktopicon"; Description: "Create a &desktop icon"; GroupDescription: "Additional icons:"
+
+[Run]
+Filename: "{app}\TimeMinder.exe"; Description: "Launch TimeMinder"; Flags: nowait postinstall skipifsilent
+```
+
+### 4. Build the Installer
+
+1. Open Inno Setup.
+2. Open your `TimeMinder.iss` script.
+3. Click "Compile".
+4. The output will be `TimeMinderSetup.exe` in your project root.
+
+### 5. Test the Installer
+
+- Run `TimeMinderSetup.exe` on a test machine (or VM) to ensure it installs everything correctly.
+- Check that shortcuts are created and the app runs.
+
+**You can further customize the script (version, icons, uninstall, etc.) as needed. Let me know if you want to add more features or need help with any step!** 

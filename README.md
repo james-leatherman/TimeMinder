@@ -37,31 +37,50 @@ TimeMinder is a lightweight, customizable timer designed to help you manage your
 
 ## Getting Started
 
-You have three options to get started with TimeMinder:
+You have several options to get started with TimeMinder, listed from easiest to most advanced:
 
-### Option 1: Download the EXE (Recommended)
-For a plug-and-play experience without any dependencies, download the compiled `.exe` file.
+### Option 1: Use the Windows Installer (Recommended)
 
-- **[Download TimeMinder.exe](https://github.com/james-leatherman/TimeMinder/blob/main/TimeMinder.exe)**
+For the simplest setup, download and run the all-in-one installer:
+
+- **[Download TimeMinderSetup.exe](https://github.com/james-leatherman/TimeMinder/releases/latest/download/TimeMinderSetup.exe)**
+
+This will install TimeMinder, create shortcuts, and place all required files in the appropriate location.
+Just double-click the installer and follow the prompts.
+
+---
+
+### Option 2: Download the Standalone EXE
+
+If you prefer a portable version without installation:
+
+- **[Download TimeMinder.exe](https://github.com/james-leatherman/TimeMinder/releases/latest/download/TimeMinder.exe)**
 
 Simply run the downloaded file to start the timer.
+*Note: This may trigger Windows Defender SmartScreen.*
 
-*Note: This will trigger Windows Defender.*
+---
 
-### Option 2: Download the Script
-If you have AutoHotkey v2 installed, you can download the script file directly.
+### Option 3: Download the Script
 
-- **[Download TimeMinder.ahk](https://github.com/james-leatherman/TimeMinder/blob/main/TimeMinder.exe)**
+If you have AutoHotkey v2 installed, you can run the script directly:
+
+- **[Download TimeMinder.ahk](https://github.com/james-leatherman/TimeMinder/blob/main/TimeMinder.ahk)**
 
 Run the script by right-clicking it and selecting `Run with AutoHotkey`, or run it from the command line.
 
-### Option 3: Clone the Repository
-To get the full source code, including the logo and README, clone the repository using Git.
+---
+
+### Option 4: Clone the Repository and Build from Source
+
+To get the full source code, including all assets and documentation, clone the repository using Git:
 
 ```sh
-git clone https://github.com/USERNAME/TimeMinder.git
+git clone https://github.com/james-leatherman/TimeMinder.git
 cd TimeMinder
 ```
+
+You can then build the executable or distribution package yourself. See the "Building from Source" section below for details.
 
 ---
 
