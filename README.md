@@ -186,28 +186,29 @@ For detailed instructions on using the build script, including prerequisites and
 
 ## Project Structure
 
-```
+Repository Layout:
 TimeMinder/
-├── TimeMinder.ahk              # Main script
+├── TimeMinder.ahk              # Main script (source)
 ├── images/                     # Images and icons
-│   ├── TimeMinderIcon.ico     # Application icon
-│   └── TimeMinderLogo.png     # Logo
-├── build.ps1                   # PowerShell build script
-├── build.bat                   # Batch build script
-├── create_distribution.ps1     # Distribution creator
-├── README.md                   # This file
+│   ├── TimeMinderIcon.ico
+│   └── TimeMinderLogo.png
+├── build/                      # Build scripts and installer definition
+│   ├── build.ps1
+│   ├── TimeMinder.iss
+│   └── ...
+├── README.md                   # Project documentation
 ├── SOUND_MANAGEMENT.md         # Sound management documentation
 ├── BUILD_INSTRUCTIONS.md       # Build instructions
-└── PACKAGING_GUIDE.md          # Comprehensive packaging guide
+└── PACKAGING_GUIDE.md          # Packaging guide
 
-# Per-user data (created at runtime):
+User Data (created at runtime, not in repo):
 %APPDATA%/TimeMinder/
-├── TimeMinder.ini              # Configuration file (auto-created)
-└── sounds/                     # Sound files directory (custom/downloaded sounds)
-    └── quack.mp3               # Default sound file
-```
+├── TimeMinder.ini              # User configuration file
+└── sounds/                     # User's custom/downloaded sound files
+    └── quack.mp3               # Default sound file (copied on first run)
 
-*Note: As of v1.0.2, all configuration and sound files are stored in the user's AppData folder, not the install directory.*
+*Note: As of v1.0.2, all configuration and sound files are stored in the user's AppData folder, not the install directory or repository.*
+*The installer (TimeMinderSetup.exe) and portable EXE are available on the [Releases page](https://github.com/james-leatherman/TimeMinder/releases).*
 
 ---
 
