@@ -178,81 +178,15 @@ TimeMinder includes comprehensive sound management features that allow you to:
    - "Clear Custom Sound" to use the default beep
 3. **Press `Ctrl+Shift+I`** to view sound information and status
 
-For detailed information about sound management features, see **[SOUND_MANAGEMENT.md](SOUND_MANAGEMENT.md)**.
-
 ---
 
 ## Building from Source
 
-### For Developers
+If you have cloned the repository and wish to build the executable yourself, you can use the provided PowerShell build script.
 
-If you want to build TimeMinder from source or create your own distribution:
+For detailed instructions on using the build script, including prerequisites and command options, please see the dedicated guide:
 
-#### Prerequisites
-- **Windows OS**
-- **AHK2EXE** (AutoHotkey compiler)
-
-#### Quick Build
-
-1. **Install AHK2EXE**:
-   - Download from [https://github.com/AutoHotkey/Ahk2Exe/releases](https://github.com/AutoHotkey/Ahk2Exe/releases)
-   - Download `Ahk2Exe.zip` from the latest release
-   - Extract to `C:\Tools\Ahk2Exe\`
-
-2. **Build TimeMinder**:
-   ```powershell
-   # Basic build
-   .\build\build.ps1
-
-   # Build with compression (smaller file)
-   .\build\build.ps1 -Compress
-
-   # Create complete distribution
-   .\build\create_distribution.ps1
-   ```
-
-#### Build Options
-
-```powershell
-# 32-bit version
-.\build\build.ps1 -Architecture 32
-
-# Custom output name
-.\build\build.ps1 -OutputName "TimeMinder_v1.0.exe"
-
-# Complete distribution with version
-.\build\create_distribution.ps1 -Version "1.1" -Compress
-```
-
-#### Alternative Build Methods
-
-```cmd
-# Using batch script
-.\build\build.bat
-
-# Manual compilation
-"C:\Tools\Ahk2Exe\Ahk2Exe.exe" /in TimeMinder.ahk /out TimeMinder.exe /icon images\TimeMinderIcon.ico /bin 64 /compress 1
-```
-
-For detailed build instructions, see **[BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md)** and **[PACKAGING_GUIDE.md](PACKAGING_GUIDE.md)**.
-
-### Build Scripts
-
-The repository includes several build scripts:
-
-- **`build.ps1`** - PowerShell build script with advanced options
-- **`build.bat`** - Batch file build script for simple compilation
-- **`create_distribution.ps1`** - Complete distribution package creator
-- **`BUILD_INSTRUCTIONS.md`** - Quick start guide for building
-- **`PACKAGING_GUIDE.md`** - Comprehensive packaging documentation
-
-### Distribution Package
-
-The build process creates:
-- **Standalone executable** (no AutoHotkey required)
-- **Complete distribution folder** with all files
-- **ZIP archive** for easy distribution
-- **Documentation** and configuration files
+- **[build/README.md](build/README.md)**
 
 ---
 
