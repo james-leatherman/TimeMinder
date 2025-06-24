@@ -736,8 +736,8 @@ SelectFromDownloaded(*) {
     listBox := selectionGui.AddListBox("w400 h200 vSelectedFile")
     for soundFile in soundFiles {
         ; Show just the filename, not the full path
-        filename := RegExReplace(soundFile, ".*\\", "")
-        listBox.Add(filename)
+        filename := RegExReplace(soundFile, ".*\\\\", "")
+        listBox.Add([filename])
     }
     
     ; Add buttons
