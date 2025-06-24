@@ -1,12 +1,32 @@
 #Requires AutoHotkey v2.0
 
-; Configuration file path
-configFile := A_ScriptDir . "\TimeMinder.ini"
-soundsDir := A_ScriptDir . "\sounds"
-
-; Ensure sounds directory exists
+; --- AppData Paths ---
+appDataDir := A_AppData "\TimeMinder"
+if (!DirExist(appDataDir)) {
+    DirCreate(appDataDir)
+}
+configFile := appDataDir . "\TimeMinder.ini"
+soundsDir := appDataDir . "\sounds"
 if (!DirExist(soundsDir)) {
     DirCreate(soundsDir)
+}
+
+; --- Migration Logic ---
+oldConfigFile := A_ScriptDir . "\TimeMinder.ini"
+oldSoundsDir := A_ScriptDir . "\sounds"
+
+; Migrate config file if it exists in old location and not in new
+if (FileExist(oldConfigFile) && !FileExist(configFile)) {
+    try FileMove(oldConfigFile, configFile, true)
+}
+; Migrate sound files if old sounds dir exists and new is empty
+if (DirExist(oldSoundsDir)) {
+    loop files, oldSoundsDir . "\*.*" {
+        dest := soundsDir . "\" . A_LoopFileName
+        if (!FileExist(dest)) {
+            try FileMove(A_LoopFileFullPath, dest, true)
+        }
+    }
 }
 
 ; Load custom sound path from config file

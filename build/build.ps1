@@ -52,6 +52,9 @@ if (-not (Test-Path $SourceFile)) {
     exit 1
 }
 
+# --- Clean up old executables ---
+Get-ChildItem -Path $ProjectRoot -Filter '*.exe' | Where-Object { $_.Name -ne 'build.ps1' } | ForEach-Object { Remove-Item $_.FullName -Force }
+
 # --- Build Logic ---
 
 # Clean up previous build executable

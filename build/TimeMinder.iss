@@ -2,7 +2,7 @@
 
 [Setup]
 AppName=TimeMinder
-AppVersion=1.0
+AppVersion=1.0.2
 DefaultDirName={pf}\TimeMinder
 DefaultGroupName=TimeMinder
 OutputDir=..
@@ -24,4 +24,8 @@ Name: "{userdesktop}\TimeMinder"; Filename: "{app}\TimeMinder.exe"; Tasks: deskt
 Name: "desktopicon"; Description: "Create a &desktop icon"; GroupDescription: "Additional icons:"
 
 [Run]
+Filename: "cmd.exe"; Parameters: "/C attrib -R ""{app}\\*.*"" /S /D"; Flags: runhidden
 Filename: "{app}\TimeMinder.exe"; Description: "Launch TimeMinder"; Flags: nowait postinstall skipifsilent
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{userappdata}\\TimeMinder"
