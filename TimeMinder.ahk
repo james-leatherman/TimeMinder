@@ -1,5 +1,17 @@
 #Requires AutoHotkey v2.0
 
+; Configuration file path
+configFile := A_ScriptDir . "\TimeMinder.ini"
+soundsDir := A_ScriptDir . "\sounds"
+
+; Ensure sounds directory exists
+if (!DirExist(soundsDir)) {
+    DirCreate(soundsDir)
+}
+
+; Load custom sound path from config file
+customSoundPath := LoadCustomSoundPath()
+
 ; Parse command line arguments
 sessionTime := 3600000 ; Default: 60 minutes
 breakTime := 1800000 ; Default: 30 minutes
@@ -87,10 +99,82 @@ finished := false
 sessionBeepActive := false
 totalBeepActive := false
 
+; --- Configuration Functions ---
+LoadCustomSoundPath() {
+    global configFile
+    try {
+        return IniRead(configFile, "Settings", "CustomSoundPath", "")
+    } catch {
+        return ""
+    }
+}
+
+SaveCustomSoundPath(path) {
+    global configFile
+    try {
+        IniWrite(path, configFile, "Settings", "CustomSoundPath")
+        return true
+    } catch {
+        return false
+    }
+}
+
+; --- Sound File Management Functions ---
+DownloadSoundFile(url, filename := "") {
+    global soundsDir
+    
+    ; Generate filename if not provided
+    if (filename = "") {
+        ; Extract filename from URL
+        filename := RegExReplace(url, ".*/", "")
+        if (filename = "" || !RegExMatch(filename, "\.(wav|mp3|wma|aac|m4a|flac)$")) {
+            filename := "custom_sound_" . A_Now . ".mp3"
+        }
+    }
+    
+    ; Ensure filename has proper extension
+    if (!RegExMatch(filename, "\.(wav|mp3|wma|aac|m4a|flac)$")) {
+        filename .= ".mp3"
+    }
+    
+    localPath := soundsDir . "\" . filename
+    
+    try {
+        ; Download the file
+        Download(url, localPath)
+        
+        ; Verify file was downloaded successfully
+        if (FileExist(localPath) && FileGetSize(localPath) > 0) {
+            return localPath
+        } else {
+            return ""
+        }
+    } catch {
+        return ""
+    }
+}
+
+GetAvailableSoundFiles() {
+    global soundsDir
+    soundFiles := []
+    
+    try {
+        loop files, soundsDir . "\*.*" {
+            if (RegExMatch(A_LoopFileName, "\.(wav|mp3|wma|aac|m4a|flac)$")) {
+                soundFiles.Push(A_LoopFileFullPath)
+            }
+        }
+    } catch {
+        ; Directory might not exist yet
+    }
+    
+    return soundFiles
+}
+
 ; --- Beep Notification Function ---
 BeepNotification(*) {
     global customSoundPath
-    if (customSoundPath != "") {
+    if (customSoundPath != "" && FileExist(customSoundPath)) {
         try {
             SoundPlay customSoundPath
         } catch {
@@ -523,17 +607,250 @@ DecrementBreakElapsed() {
 }
 
 ^+s::SetCustomSound()
-
-customSoundPath := ""
+^+i::ShowSoundInfo()
 
 SetCustomSound() {
-    global customSoundPath
+    global customSoundPath, soundsDir
+    
+    ; Create a menu for sound options
+    soundMenu := Menu()
+    soundMenu.Add("Select Local File", SelectLocalSoundFile)
+    soundMenu.Add("Download from URL", DownloadSoundFromURL)
+    soundMenu.Add("Select from Downloaded", SelectFromDownloaded)
+    soundMenu.Add("Clear Custom Sound", ClearCustomSound)
+    soundMenu.Add() ; Separator
+    soundMenu.Add("Open Sounds Folder", OpenSoundsFolder)
+    
+    ; Show the menu at cursor position
+    soundMenu.Show()
+}
+
+SelectLocalSoundFile(*) {
+    global customSoundPath, soundsDir
     file := FileSelect(1, , "Select a sound file", "Audio Files (*.wav;*.mp3;*.wma;*.aac;*.m4a;*.flac)")
     if (file != "") {
-        customSoundPath := file
-        MsgBox "Custom sound set!"
-    } else {
-        customSoundPath := ""
-        MsgBox "Custom sound cleared. Default beep will be used."
+        ; Check if file is outside the sounds directory
+        if (!InStr(file, soundsDir)) {
+            ; Ask if user wants to copy the file to sounds directory
+            result := MsgBox("The selected file is outside the sounds directory.`n`nWould you like to copy it to the sounds directory for better organization?`n`nThis ensures the sound file will be available even if the original is moved or deleted.", "Copy Sound File", "YesNo")
+            
+            if (result = "Yes") {
+                ; Copy file to sounds directory
+                filename := RegExReplace(file, ".*\\", "")
+                newPath := soundsDir . "\" . filename
+                
+                ; Handle filename conflicts
+                counter := 1
+                while (FileExist(newPath)) {
+                    name := RegExReplace(filename, "\.([^.]+)$", "")
+                    ext := RegExReplace(filename, ".*\.", "")
+                    newPath := soundsDir . "\" . name . "_" . counter . "." . ext
+                    counter++
+                }
+                
+                try {
+                    FileCopy(file, newPath)
+                    customSoundPath := newPath
+                    if (SaveCustomSoundPath(newPath)) {
+                        MsgBox "Sound file copied to sounds directory and set as custom sound!"
+                    } else {
+                        MsgBox "Sound file copied but failed to save to config file."
+                    }
+                } catch {
+                    MsgBox "Failed to copy sound file. Using original location."
+                    customSoundPath := file
+                    if (SaveCustomSoundPath(file)) {
+                        MsgBox "Custom sound set and saved!"
+                    } else {
+                        MsgBox "Custom sound set but failed to save to config file."
+                    }
+                }
+            } else {
+                ; Use original file location
+                customSoundPath := file
+                if (SaveCustomSoundPath(file)) {
+                    MsgBox "Custom sound set and saved!"
+                } else {
+                    MsgBox "Custom sound set but failed to save to config file."
+                }
+            }
+        } else {
+            ; File is already in sounds directory
+            customSoundPath := file
+            if (SaveCustomSoundPath(file)) {
+                MsgBox "Custom sound set and saved!"
+            } else {
+                MsgBox "Custom sound set but failed to save to config file."
+            }
+        }
     }
+}
+
+DownloadSoundFromURL(*) {
+    global customSoundPath, soundsDir
+    
+    ; Prompt for URL
+    url := InputBox("Enter the URL of the sound file to download:", "Download Sound File", "w400")
+    if (url.Result = "OK" && url.Value != "") {
+        ; Show download progress
+        progressGui := Gui("+ToolWindow", "Downloading...")
+        progressGui.AddText("w300", "Downloading sound file...")
+        progressGui.AddProgress("w300 h20 vProgressBar", 0)
+        progressGui.Show("NoActivate")
+        
+        ; Download the file
+        localPath := DownloadSoundFile(url.Value)
+        
+        ; Hide progress
+        progressGui.Destroy()
+        
+        if (localPath != "") {
+            customSoundPath := localPath
+            if (SaveCustomSoundPath(localPath)) {
+                MsgBox "Sound file downloaded and set as custom sound!"
+            } else {
+                MsgBox "Sound file downloaded but failed to save to config file."
+            }
+        } else {
+            MsgBox "Failed to download sound file. Please check the URL and try again."
+        }
+    }
+}
+
+SelectFromDownloaded(*) {
+    global customSoundPath, soundsDir
+    
+    ; Get available sound files
+    soundFiles := GetAvailableSoundFiles()
+    
+    if (soundFiles.Length = 0) {
+        MsgBox "No sound files found in the sounds directory.`n`nUse 'Download from URL' or 'Select Local File' to add sound files."
+        return
+    }
+    
+    ; Create selection dialog
+    selectionGui := Gui("+ToolWindow", "Select Sound File")
+    selectionGui.AddText("w400", "Select a sound file from the downloaded files:")
+    
+    ; Create listbox with sound files
+    listBox := selectionGui.AddListBox("w400 h200 vSelectedFile")
+    for soundFile in soundFiles {
+        ; Show just the filename, not the full path
+        filename := RegExReplace(soundFile, ".*\\", "")
+        listBox.Add(filename)
+    }
+    
+    ; Add buttons
+    buttonGui := Gui()
+    buttonGui.AddButton("w80 h30 vSelectBtn", "Select").OnEvent("Click", SelectSoundFile)
+    buttonGui.AddButton("x+10 w80 h30 vCancelBtn", "Cancel").OnEvent("Click", CloseSelectionGui)
+    
+    ; Show both GUIs
+    selectionGui.Show("NoActivate")
+    buttonGui.Show("NoActivate")
+    
+    ; Position button GUI below selection GUI
+    WinGetPos(&x, &y, &w, &h, selectionGui.Hwnd)
+    buttonGui.Move(x, y + h + 10)
+    
+    ; Store references for event handlers
+    global selectionGuiRef := selectionGui
+    global buttonGuiRef := buttonGui
+    global soundFilesRef := soundFiles
+}
+
+SelectSoundFile(*) {
+    global customSoundPath, selectionGuiRef, buttonGuiRef, soundFilesRef
+    
+    ; Get selected file
+    selectedIndex := selectionGuiRef["SelectedFile"].Value
+    if (selectedIndex > 0) {
+        selectedFile := soundFilesRef[selectedIndex]
+        customSoundPath := selectedFile
+        if (SaveCustomSoundPath(selectedFile)) {
+            MsgBox "Custom sound set and saved!"
+        } else {
+            MsgBox "Custom sound set but failed to save to config file."
+        }
+    }
+    
+    ; Close GUIs
+    selectionGuiRef.Destroy()
+    buttonGuiRef.Destroy()
+}
+
+CloseSelectionGui(*) {
+    global selectionGuiRef, buttonGuiRef
+    selectionGuiRef.Destroy()
+    buttonGuiRef.Destroy()
+}
+
+ClearCustomSound(*) {
+    global customSoundPath
+    customSoundPath := ""
+    if (SaveCustomSoundPath("")) {
+        MsgBox "Custom sound cleared. Default beep will be used."
+    } else {
+        MsgBox "Custom sound cleared but failed to save to config file."
+    }
+}
+
+OpenSoundsFolder(*) {
+    global soundsDir
+    try {
+        Run soundsDir
+    } catch {
+        MsgBox "Failed to open sounds folder."
+    }
+}
+
+ShowSoundInfo() {
+    global customSoundPath, soundsDir
+    
+    info := "Sound Configuration:`n`n"
+    
+    if (customSoundPath != "") {
+        if (FileExist(customSoundPath)) {
+            info .= "✓ Custom sound is set and file exists:`n"
+            info .= customSoundPath . "`n`n"
+            
+            ; Show file size
+            try {
+                fileSize := FileGetSize(customSoundPath)
+                if (fileSize > 1024 * 1024) {
+                    info .= "File size: " . Round(fileSize / (1024 * 1024), 2) . " MB`n"
+                } else {
+                    info .= "File size: " . Round(fileSize / 1024, 2) . " KB`n"
+                }
+            } catch {
+                info .= "File size: Unknown`n"
+            }
+        } else {
+            info .= "✗ Custom sound is set but file not found:`n"
+            info .= customSoundPath . "`n`n"
+            info .= "The file may have been moved or deleted.`n"
+        }
+    } else {
+        info .= "No custom sound set. Using default beep.`n`n"
+    }
+    
+    ; Show sounds directory info
+    info .= "`nSounds directory: " . soundsDir . "`n"
+    
+    if (DirExist(soundsDir)) {
+        soundFiles := GetAvailableSoundFiles()
+        info .= "Downloaded sound files: " . soundFiles.Length . "`n"
+        
+        if (soundFiles.Length > 0) {
+            info .= "`nAvailable files:`n"
+            for soundFile in soundFiles {
+                filename := RegExReplace(soundFile, ".*\\", "")
+                info .= "• " . filename . "`n"
+            }
+        }
+    } else {
+        info .= "Sounds directory does not exist.`n"
+    }
+    
+    MsgBox(info, "Sound Information", "T300")
 }
