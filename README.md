@@ -189,9 +189,6 @@ For detailed instructions on using the build script, including prerequisites and
 ```
 TimeMinder/
 ├── TimeMinder.ahk              # Main script
-├── TimeMinder.ini              # Configuration file (auto-created)
-├── sounds/                     # Sound files directory
-│   └── quack.mp3              # Default sound file
 ├── images/                     # Images and icons
 │   ├── TimeMinderIcon.ico     # Application icon
 │   └── TimeMinderLogo.png     # Logo
@@ -202,7 +199,15 @@ TimeMinder/
 ├── SOUND_MANAGEMENT.md         # Sound management documentation
 ├── BUILD_INSTRUCTIONS.md       # Build instructions
 └── PACKAGING_GUIDE.md          # Comprehensive packaging guide
+
+# Per-user data (created at runtime):
+%APPDATA%/TimeMinder/
+├── TimeMinder.ini              # Configuration file (auto-created)
+└── sounds/                     # Sound files directory (custom/downloaded sounds)
+    └── quack.mp3               # Default sound file
 ```
+
+*Note: As of v1.0.2, all configuration and sound files are stored in the user's AppData folder, not the install directory.*
 
 ---
 
