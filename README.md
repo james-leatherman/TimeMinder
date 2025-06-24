@@ -160,13 +160,7 @@ While TimeMinder is running, you can use the following keyboard shortcuts:
 
 ## Sound Management
 
-TimeMinder includes comprehensive sound management features that allow you to:
-
-- **Download sound files** directly from URLs
-- **Store sound files locally** in a dedicated `sounds/` directory
-- **Persist sound settings** between application restarts
-- **Organize and manage** multiple sound files
-- **Copy external files** to the sounds directory for better organization
+TimeMinder now stores all custom/downloaded sound files in `%APPDATA%\TimeMinder\sounds` and configuration in `%APPDATA%\TimeMinder\TimeMinder.ini`. This avoids permissions issues and works for all users.
 
 ### Quick Start with Sound Management
 
@@ -231,3 +225,11 @@ TimeMinder/
 
 ## More Information
 - Official AutoHotkey documentation: [https://www.autohotkey.com/docs/](https://www.autohotkey.com/docs/) 
+
+## Important Changes in v1.0.2
+
+- All configuration and sound files are now stored in `%APPDATA%\TimeMinder` (per-user, no admin rights needed)
+- On first run, any old config or sound files in the install directory are automatically migrated to AppData
+- The uninstaller will remove all AppData data for a clean uninstall
+- The build script now cleans up old `.exe` files before building
+- Download the latest installer or EXE from the [Releases page](https://github.com/james-leatherman/TimeMinder/releases)
