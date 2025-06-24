@@ -17,7 +17,7 @@ param(
 )
 
 # --- Configuration ---
-$Ahk2ExePath = "C:\Tools\Ahk2Exe\Ahk2Exe.exe"
+$Ahk2ExePath = ".\Ahk2Exe.exe"
 $SourceFile = "..\TimeMinder.ahk"
 $IconFile = "..\images\TimeMinderIcon.ico"
 
