@@ -23,16 +23,16 @@ function Build-Executable {
         [string]$Architecture,
         [switch]$Compress
     )
-    $OutputName = "..\TimeMinder.exe"
+    $OutputName = "TimeMinder.exe"
 
     Write-Host "Building TimeMinder Executable..." -ForegroundColor Green
     Write-Host "Architecture: $Architecture-bit" -ForegroundColor Cyan
     Write-Host "Compression: $(if ($Compress) { 'Enabled' } else { 'Disabled' })" -ForegroundColor Cyan
     Write-Host "Output: $OutputName" -ForegroundColor Cyan
 
-    $CmdArgs = @("/silent", "/in", "`"$SourceFile`"", "/out", "`"$OutputName`"", "/bin", $Architecture)
-    if ($IconFile -ne "" -and (Test-Path $IconFile)) {
-        $CmdArgs += @("/icon", "`"$IconFile`"")
+    $CmdArgs = @("/silent", "/in", $SourceFile, "/out", $OutputName, "/bin", $Architecture)
+    if ((Test-Path $IconFile)) {
+        $CmdArgs += @("/icon", $IconFile)
     }
     if ($Compress) {
         $CmdArgs += @("/compress", "1")
@@ -50,9 +50,9 @@ function Create-Distribution {
     )
 
     # Distribution settings
-    $DistDir = "..\TimeMinder_v$Version"
+    $DistDir = "TimeMinder_v$Version"
     $ExeName = "TimeMinder_v$Version.exe"
-    $ZipName = "..\TimeMinder_v$Version.zip"
+    $ZipName = "TimeMinder_v$Version.zip"
     $DistExePath = "$DistDir\$ExeName"
 
     Write-Host "Creating TimeMinder Distribution v$Version" -ForegroundColor Green
@@ -74,9 +74,9 @@ function Create-Distribution {
 
     # Compile executable
     Write-Host "Compiling TimeMinder..." -ForegroundColor Cyan
-    $CmdArgs = @("/silent", "/in", "`"$SourceFile`"", "/out", "`"$DistExePath`"", "/bin", $Architecture)
-    if ($IconFile -ne "" -and (Test-Path $IconFile)) {
-        $CmdArgs += @("/icon", "`"$IconFile`"")
+    $CmdArgs = @("/silent", "/in", $SourceFile, "/out", $DistExePath, "/bin", $Architecture)
+    if ((Test-Path $IconFile)) {
+        $CmdArgs += @("/icon", $IconFile)
     }
     if ($Compress) {
         $CmdArgs += @("/compress", "1")
@@ -87,9 +87,9 @@ function Create-Distribution {
     
     # Copy supporting files
     Write-Host "Copying supporting files..." -ForegroundColor Cyan
-    Copy-Item "..\sounds\*" "$DistDir\sounds\" -Recurse -Force
-    Copy-Item "..\images\*" "$DistDir\images\" -Recurse -Force
-    Copy-Item "..\README.md" "$DistDir\" -Force
+    Copy-Item "sounds\*" "$DistDir\sounds\" -Recurse -Force
+    Copy-Item "images\*" "$DistDir\images\" -Recurse -Force
+    Copy-Item "README.md" "$DistDir\" -Force
 
     # Create ZIP archive
     Write-Host "Creating ZIP archive..." -ForegroundColor Cyan
@@ -103,7 +103,11 @@ function Create-Distribution {
 function Invoke-Command {
     param([string]$Command, [array]$Args)
     try {
+        # Temporarily change to the project root to run the command
+        Push-Location ".."
         & $Command $Args
+        Pop-Location
+        
         if ($LASTEXITCODE -ne 0) {
             Write-Host "ERROR: Operation failed with exit code: $LASTEXITCODE" -ForegroundColor Red
             exit 1
@@ -118,8 +122,8 @@ function Invoke-Command {
 # --- Configuration ---
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $Ahk2ExePath = "C:\Program Files\AutoHotkey\Compiler\Ahk2Exe.exe" # Use the system-standard compiler
-$SourceFile = Join-Path $ScriptDir "..\TimeMinder.ahk"
-$IconFile = Join-Path $ScriptDir "..\images\TimeMinderIcon.ico"
+$SourceFile = "TimeMinder.ahk"
+$IconFile = "images\TimeMinderIcon.ico"
 
 
 # --- Prerequisite Checks ---
