@@ -30,16 +30,16 @@ function Build-Executable {
     Write-Host "Compression: $(if ($Compress) { 'Enabled' } else { 'Disabled' })" -ForegroundColor Cyan
     Write-Host "Output: $OutputName" -ForegroundColor Cyan
 
-    $BuildCommand = "`"$Ahk2ExePath`" /in `"$SourceFile`" /out `"$OutputName`" /bin $Architecture"
+    $CmdArgs = @("/in", "`"$SourceFile`"", "/out", "`"$OutputName`"", "/bin", $Architecture)
     if ($IconFile -ne "" -and (Test-Path $IconFile)) {
-        $BuildCommand += " /icon `"$IconFile`""
+        $CmdArgs += @("/icon", "`"$IconFile`"")
     }
     if ($Compress) {
-        $BuildCommand += " /compress 1"
+        $CmdArgs += @("/compress", "1")
     }
 
-    Write-Host "Command: $BuildCommand" -ForegroundColor Gray
-    Invoke-Command -Command $BuildCommand
+    Write-Host "Command: $Ahk2ExePath $($CmdArgs -join ' ')" -ForegroundColor Gray
+    Invoke-Command -Command $Ahk2ExePath -Args $CmdArgs
 }
 
 function Create-Distribution {
@@ -74,16 +74,16 @@ function Create-Distribution {
 
     # Compile executable
     Write-Host "Compiling TimeMinder..." -ForegroundColor Cyan
-    $BuildCommand = "`"$Ahk2ExePath`" /in `"$SourceFile`" /out `"$DistExePath`" /bin $Architecture"
+    $CmdArgs = @("/in", "`"$SourceFile`"", "/out", "`"$DistExePath`"", "/bin", $Architecture)
     if ($IconFile -ne "" -and (Test-Path $IconFile)) {
-        $BuildCommand += " /icon `"$IconFile`""
+        $CmdArgs += @("/icon", "`"$IconFile`"")
     }
     if ($Compress) {
-        $BuildCommand += " /compress 1"
+        $CmdArgs += @("/compress", "1")
     }
     
-    Write-Host "Build command: $BuildCommand" -ForegroundColor Gray
-    Invoke-Command -Command $BuildCommand
+    Write-Host "Build command: $Ahk2ExePath $($CmdArgs -join ' ')" -ForegroundColor Gray
+    Invoke-Command -Command $Ahk2ExePath -Args $CmdArgs
     
     # Copy supporting files
     Write-Host "Copying supporting files..." -ForegroundColor Cyan
@@ -101,9 +101,9 @@ function Create-Distribution {
 }
 
 function Invoke-Command {
-    param([string]$Command)
+    param([string]$Command, [array]$Args)
     try {
-        & $Command
+        & $Command $Args
         if ($LASTEXITCODE -ne 0) {
             Write-Host "ERROR: Operation failed with exit code: $LASTEXITCODE" -ForegroundColor Red
             exit 1
