@@ -16,38 +16,6 @@ param(
     [string]$Version = "1.0"
 )
 
-# --- Configuration ---
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$Ahk2ExePath = Join-Path $ScriptDir "Ahk2Exe.exe" # Use the local compiler in the build folder
-$SourceFile = Join-Path $ScriptDir "..\TimeMinder.ahk"
-$IconFile = Join-Path $ScriptDir "..\images\TimeMinderIcon.ico"
-
-
-# --- Prerequisite Checks ---
-if (!(Test-Path $Ahk2ExePath)) {
-    Write-Host "ERROR: Ahk2Exe not found at: $Ahk2ExePath" -ForegroundColor Red
-    Write-Host "Please install Ahk2Exe or update the path in this script." -ForegroundColor Yellow
-    Write-Host "Download from: https://github.com/AutoHotkey/Ahk2Exe/releases" -ForegroundColor Cyan
-    exit 1
-}
-
-if (!(Test-Path $SourceFile)) {
-    Write-Host "ERROR: Source file not found: $SourceFile" -ForegroundColor Red
-    exit 1
-}
-
-
-# --- Main Logic ---
-if ($Distribution) {
-    # --- DISTRIBUTION MODE ---
-    Create-Distribution -Version $Version -Architecture $Architecture -Compress:$Compress
-}
-else {
-    # --- SIMPLE BUILD MODE ---
-    Build-Executable -Architecture $Architecture -Compress:$Compress
-}
-
-
 # --- Function Definitions ---
 
 function Build-Executable {
@@ -145,4 +113,35 @@ function Invoke-Command {
         Write-Host "ERROR: Operation failed with error: $($_.Exception.Message)" -ForegroundColor Red
         exit 1
     }
+}
+
+# --- Configuration ---
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$Ahk2ExePath = Join-Path $ScriptDir "Ahk2Exe.exe" # Use the local compiler in the build folder
+$SourceFile = Join-Path $ScriptDir "..\TimeMinder.ahk"
+$IconFile = Join-Path $ScriptDir "..\images\TimeMinderIcon.ico"
+
+
+# --- Prerequisite Checks ---
+if (!(Test-Path $Ahk2ExePath)) {
+    Write-Host "ERROR: Ahk2Exe not found at: $Ahk2ExePath" -ForegroundColor Red
+    Write-Host "Please install Ahk2Exe or update the path in this script." -ForegroundColor Yellow
+    Write-Host "Download from: https://github.com/AutoHotkey/Ahk2Exe/releases" -ForegroundColor Cyan
+    exit 1
+}
+
+if (!(Test-Path $SourceFile)) {
+    Write-Host "ERROR: Source file not found: $SourceFile" -ForegroundColor Red
+    exit 1
+}
+
+
+# --- Main Logic ---
+if ($Distribution) {
+    # --- DISTRIBUTION MODE ---
+    Create-Distribution -Version $Version -Architecture $Architecture -Compress:$Compress
+}
+else {
+    # --- SIMPLE BUILD MODE ---
+    Build-Executable -Architecture $Architecture -Compress:$Compress
 } 
