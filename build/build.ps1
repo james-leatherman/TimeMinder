@@ -17,9 +17,10 @@ param(
 )
 
 # --- Configuration ---
-$Ahk2ExePath = ".\Ahk2Exe.exe"
-$SourceFile = "..\TimeMinder.ahk"
-$IconFile = "..\images\TimeMinderIcon.ico"
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$Ahk2ExePath = Join-Path $ScriptDir "Ahk2Exe.exe" # Use the local compiler in the build folder
+$SourceFile = Join-Path $ScriptDir "..\TimeMinder.ahk"
+$IconFile = Join-Path $ScriptDir "..\images\TimeMinderIcon.ico"
 
 
 # --- Prerequisite Checks ---
