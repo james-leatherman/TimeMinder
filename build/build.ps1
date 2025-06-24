@@ -30,7 +30,7 @@ function Build-Executable {
     Write-Host "Compression: $(if ($Compress) { 'Enabled' } else { 'Disabled' })" -ForegroundColor Cyan
     Write-Host "Output: $OutputName" -ForegroundColor Cyan
 
-    $CmdArgs = @("/in", "`"$SourceFile`"", "/out", "`"$OutputName`"", "/bin", $Architecture)
+    $CmdArgs = @("/silent", "/in", "`"$SourceFile`"", "/out", "`"$OutputName`"", "/bin", $Architecture)
     if ($IconFile -ne "" -and (Test-Path $IconFile)) {
         $CmdArgs += @("/icon", "`"$IconFile`"")
     }
@@ -74,7 +74,7 @@ function Create-Distribution {
 
     # Compile executable
     Write-Host "Compiling TimeMinder..." -ForegroundColor Cyan
-    $CmdArgs = @("/in", "`"$SourceFile`"", "/out", "`"$DistExePath`"", "/bin", $Architecture)
+    $CmdArgs = @("/silent", "/in", "`"$SourceFile`"", "/out", "`"$DistExePath`"", "/bin", $Architecture)
     if ($IconFile -ne "" -and (Test-Path $IconFile)) {
         $CmdArgs += @("/icon", "`"$IconFile`"")
     }
