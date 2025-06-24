@@ -30,7 +30,7 @@ function Build-Executable {
     Write-Host "Compression: $(if ($Compress) { 'Enabled' } else { 'Disabled' })" -ForegroundColor Cyan
     Write-Host "Output: $OutputName" -ForegroundColor Cyan
 
-    $BuildCommand = "$Ahk2ExePath /in `"$SourceFile`" /out `"$OutputName`" /bin $Architecture"
+    $BuildCommand = "$Ahk2ExePath /in `"$SourceFile`" /out `"$OutputName`" /base `"C:\Program Files\AutoHotkey\v2\AutoHotkey.exe`""
     if ($IconFile -ne "" -and (Test-Path $IconFile)) {
         $BuildCommand += " /icon `"$IconFile`""
     }
@@ -74,7 +74,7 @@ function Create-Distribution {
 
     # Compile executable
     Write-Host "Compiling TimeMinder..." -ForegroundColor Cyan
-    $BuildCommand = "$Ahk2ExePath /in `"$SourceFile`" /out `"$DistExePath`" /bin $Architecture"
+    $BuildCommand = "$Ahk2ExePath /in `"$SourceFile`" /out `"$DistExePath`" /base `"C:\Program Files\AutoHotkey\v2\AutoHotkey.exe`""
     if ($IconFile -ne "" -and (Test-Path $IconFile)) {
         $BuildCommand += " /icon `"$IconFile`""
     }
