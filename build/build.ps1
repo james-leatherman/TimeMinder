@@ -4,13 +4,13 @@
 param(
     [string]$Architecture = "64",
     [switch]$Compress,
-    [string]$OutputName = "TimeMinder.exe"
+    [string]$OutputName = "..\TimeMinder.exe"
 )
 
 # Configuration
 $Ahk2ExePath = "C:\Tools\Ahk2Exe\Ahk2Exe.exe"
-$SourceFile = "TimeMinder.ahk"
-$IconFile = "images\TimeMinderIcon.ico"
+$SourceFile = "..\TimeMinder.ahk"
+$IconFile = "..\images\TimeMinderIcon.ico"
 
 # Check if Ahk2Exe exists
 if (!(Test-Path $Ahk2ExePath)) {
