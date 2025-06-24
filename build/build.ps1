@@ -106,6 +106,7 @@ function Invoke-Command {
         # Temporarily change to the project root to run the command
         Push-Location ".."
         & $Command $Args
+        Start-Sleep -Seconds 2 # Allow time for file I/O to complete
         Pop-Location
         
         if ($LASTEXITCODE -ne 0) {
