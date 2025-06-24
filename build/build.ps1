@@ -103,7 +103,7 @@ function Create-Distribution {
 function Invoke-Command {
     param([string]$Command)
     try {
-        Invoke-Expression $Command
+        & $Command
         if ($LASTEXITCODE -ne 0) {
             Write-Host "ERROR: Operation failed with exit code: $LASTEXITCODE" -ForegroundColor Red
             exit 1
