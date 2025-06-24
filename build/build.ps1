@@ -4,7 +4,7 @@
 # Usage: .\build\build.ps1 [-Compress]
 #
 # Distribution Mode: Creates a complete, versioned distribution package.
-# Usage: .\build\build.ps1 -Distribution [-Version "1.0"] [-Architecture "64"] [-Compress]
+# Usage: .\build\build.ps1 -Distribution [-Version "1.0"] [-Architecture "64"]
 
 param(
     # --- General Parameters ---
@@ -30,7 +30,7 @@ function Build-Executable {
     Write-Host "Compression: $(if ($Compress) { 'Enabled' } else { 'Disabled' })" -ForegroundColor Cyan
     Write-Host "Output: $OutputName" -ForegroundColor Cyan
 
-    $BuildCommand = "$Ahk2ExePath /in `"$SourceFile`" /out `"$OutputName`" /base `"C:\Program Files\AutoHotkey\v2\AutoHotkey.exe`""
+    $BuildCommand = "$Ahk2ExePath /in `"$SourceFile`" /out `"$OutputName`" /bin $Architecture"
     if ($IconFile -ne "" -and (Test-Path $IconFile)) {
         $BuildCommand += " /icon `"$IconFile`""
     }
@@ -74,7 +74,7 @@ function Create-Distribution {
 
     # Compile executable
     Write-Host "Compiling TimeMinder..." -ForegroundColor Cyan
-    $BuildCommand = "$Ahk2ExePath /in `"$SourceFile`" /out `"$DistExePath`" /base `"C:\Program Files\AutoHotkey\v2\AutoHotkey.exe`""
+    $BuildCommand = "$Ahk2ExePath /in `"$SourceFile`" /out `"$DistExePath`" /bin $Architecture"
     if ($IconFile -ne "" -and (Test-Path $IconFile)) {
         $BuildCommand += " /icon `"$IconFile`""
     }
@@ -117,7 +117,7 @@ function Invoke-Command {
 
 # --- Configuration ---
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-$Ahk2ExePath = Join-Path $ScriptDir "Ahk2Exe.exe" # Use the local compiler in the build folder
+$Ahk2ExePath = "C:\Program Files\AutoHotkey\Compiler\Ahk2Exe.exe" # Use the system-standard compiler
 $SourceFile = Join-Path $ScriptDir "..\TimeMinder.ahk"
 $IconFile = Join-Path $ScriptDir "..\images\TimeMinderIcon.ico"
 
@@ -125,8 +125,7 @@ $IconFile = Join-Path $ScriptDir "..\images\TimeMinderIcon.ico"
 # --- Prerequisite Checks ---
 if (!(Test-Path $Ahk2ExePath)) {
     Write-Host "ERROR: Ahk2Exe not found at: $Ahk2ExePath" -ForegroundColor Red
-    Write-Host "Please install Ahk2Exe or update the path in this script." -ForegroundColor Yellow
-    Write-Host "Download from: https://github.com/AutoHotkey/Ahk2Exe/releases" -ForegroundColor Cyan
+    Write-Host "Please install AutoHotkey with the compiler component or update the path in this script." -ForegroundColor Yellow
     exit 1
 }
 
