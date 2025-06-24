@@ -42,7 +42,7 @@ You have three options to get started with TimeMinder:
 ### Option 1: Download the EXE (Recommended)
 For a plug-and-play experience without any dependencies, download the compiled `.exe` file.
 
-- **[Download TimeMinder.exe](https://github.com/USERNAME/TimeMinder/releases/latest/download/TimeMinder.exe)**
+- **[Download TimeMinder.exe](https://github.com/james-leatherman/TimeMinder/blob/main/TimeMinder.exe)**
 
 Simply run the downloaded file to start the timer.
 
@@ -51,7 +51,7 @@ Simply run the downloaded file to start the timer.
 ### Option 2: Download the Script
 If you have AutoHotkey v2 installed, you can download the script file directly.
 
-- **[Download TimeMinder.ahk](TimeMinder.ahk?raw=true)**
+- **[Download TimeMinder.ahk](https://github.com/james-leatherman/TimeMinder/blob/main/TimeMinder.exe)**
 
 Run the script by right-clicking it and selecting `Run with AutoHotkey`, or run it from the command line.
 
@@ -276,7 +276,4 @@ TimeMinder/
 ---
 
 ## More Information
-- Official AutoHotkey documentation: [https://www.autohotkey.com/docs/](https://www.autohotkey.com/docs/)
-- Sound Management Guide: [SOUND_MANAGEMENT.md](SOUND_MANAGEMENT.md)
-- Build Instructions: [BUILD_INSTRUCTIONS.md](BUILD_INSTRUCTIONS.md)
-- Packaging Guide: [PACKAGING_GUIDE.md](PACKAGING_GUIDE.md) 
+- Official AutoHotkey documentation: [https://www.autohotkey.com/docs/](https://www.autohotkey.com/docs/) 
