@@ -54,6 +54,10 @@ currentSessionTime := 0
 pausedSessionTime := 0
 pauseTick := 0
 isFirstTick := true
+; --- Activity / pause-on-activity settings ---
+activityIdleThreshold := 1000 ; ms since last input to consider "activity" (1 second)
+breakPaused := false
+breakPauseStart := 0
 
 ; Create GUI
 myGui := Gui("-Caption +ToolWindow +AlwaysOnTop")
@@ -220,24 +224,48 @@ updateTimer(*) {
     }
     if breakActive {
         currentSessionTime := pausedSessionTime
-        ; Flash after 10 minutes on break
-        if (A_TickCount - breakStart >= breakTime) {
+        ; If user activity (keyboard/mouse) is detected via A_TimeIdle, pause the break timer
+        if (A_TimeIdle < activityIdleThreshold) {
+            if (!breakPaused) {
+                breakPaused := true
+                breakPauseStart := A_TickCount
+                ; Indicate paused state and silence beeps
+                SetTimer(BeepNotification, 0)
+                sessionBeepActive := false
+                totalBeepActive := false
+            }
+        } else {
+            if (breakPaused) {
+                ; Resume break: account for paused duration so elapsed freezes while paused
+                breakStart += (A_TickCount - breakPauseStart)
+                breakPaused := false
+            }
+        }
+        ; Flash after 10 minutes on break (only when not paused)
+        if (!breakPaused && (A_TickCount - breakStart >= breakTime)) {
             flashTimer := !flashTimer
             breakText.Visible := flashTimer
         } else {
             breakText.Visible := true
         }
-        ; Show break countdown timer
-        breakElapsed := Max(A_TickCount - breakStart, 0)
+        ; Show break countdown timer (freeze elapsed when paused)
+        if (breakPaused) {
+            breakElapsed := Max(breakPauseStart - breakStart, 0)
+        } else {
+            breakElapsed := Max(A_TickCount - breakStart, 0)
+        }
         breakMins := breakElapsed // 60000
         breakSecs := Mod(breakElapsed // 1000, 60)
-        breakText.Text := Format("Break: {:02}:{:02}", breakMins, breakSecs)
-        breakText.Opt("Background00FF00") ; Green
-        breakText.SetFont("c222222") ; Dark text
+        if (breakPaused) {
+            breakText.Text := Format("Break Paused: {:02}:{:02}", breakMins, breakSecs)
+            breakText.Opt("BackgroundFFFF00") ; Yellow background when paused
+            breakText.SetFont("c222222") ; Dark text
+        } else {
+            breakText.Text := Format("Break: {:02}:{:02}", breakMins, breakSecs)
+            breakText.Opt("Background00FF00") ; Green
+            breakText.SetFont("c222222") ; Dark text
+        }
         breakTextAutoHide := false
-        sessionBeepActive := false
-        totalBeepActive := false
-        SetTimer(BeepNotification, 0) ; Stop beep
     } else {
         if (pauseTick) {
             startTick += (A_TickCount - pauseTick)
@@ -436,12 +464,14 @@ BreakTextHandler(txt, *) {
         breakActive := true
         breakStart := A_TickCount
         pauseTick := A_TickCount
+        breakPaused := false
         breakText.Text := "On Break"
         breakText.Opt("Background00FF00") ; Green
         breakText.SetFont("c222222") ; Dark text
         ; Pause total time (do not update totalTime while on break)
     } else {
         breakActive := false
+        breakPaused := false
         startTick := A_TickCount ; Reset timer when break ends
         lastTotalTick := A_TickCount ; Resume total time
         pausedSessionTime := 0 ; Reset pausedSessionTime so timer starts from zero
