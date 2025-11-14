@@ -544,35 +544,70 @@ ShowBreakText() {
 
 ShakeGui(gui, iterations := 10, distance := 15) {
     ; Get current position
-    gui.GetPos(&origX, &origY)
-    
+    gui.GetPos(&origX, &origY, &w, &h)
+
+    ; Get visible screen bounds (virtual screen width/height)
+    screenW := SysGet(78)
+    screenH := SysGet(79)
+
+    ; Compute min/max allowed X so GUI stays visible
+    minX := 0
+    maxX := Max(0, screenW - w)
+
     Loop iterations {
         if (Mod(A_Index, 2) = 1) {
-            gui.Move(origX + distance, origY)  ; Move right
+            newX := origX + distance
         } else {
-            gui.Move(origX - distance, origY)  ; Move left
+            newX := origX - distance
         }
+        ; Clamp movement so the GUI never goes off-screen
+        newX := (newX < minX) ? minX : ((newX > maxX) ? maxX : newX)
+        gui.Move(newX, origY)
         Sleep(75)
     }
-    gui.Move(origX, origY)  ; Reset to original position
+    ; Restore original position (clamped to visible area)
+    restoreX := (origX < minX) ? minX : ((origX > maxX) ? maxX : origX)
+    gui.Move(restoreX, origY)
+
+    ; Ensure GUI remains topmost and visible after shaking (some apps can steal Z-order)
+    try {
+        WinSet("AlwaysOnTop", "On", "ahk_id " . gui.Hwnd)
+        gui.Show("NoActivate")
+    } catch {
+        ; ignore if WinSet isn't available in some environments
+    }
 }
 
 MoveGuiToOtherTopRight(gui, margin := 10) {
-    ; Heuristic: use primary screen width to pick the other monitor's approximate top-right.
-    ; This assumes monitors are arranged horizontally (common case). If monitors differ in
-    ; size or arrangement the result may need manual adjustment.
+    ; Move the GUI to a top-right position without sending it off-screen.
+    ; Safer heuristic: if GUI is on the left half of the virtual screen, move it
+    ; to the right edge (inside visible area); otherwise move it to the left margin.
     gui.GetPos(&x, &y, &w, &h)
-    primaryW := A_ScreenWidth
+    screenW := SysGet(78)
+    screenH := SysGet(79)
 
-    if (x + w/2 < primaryW) {
-        ; Move to the right of the primary screen (other monitor's right area)
-        targetX := primaryW + (primaryW - w) - margin
+    ; Decide which side to move to based on current X
+    if (x + w/2 < (screenW / 2)) {
+        targetX := Max(0, screenW - w - margin)
     } else {
-        ; Move to top-right of the left/other monitor (approximate)
         targetX := margin
     }
+
+    ; Clamp Y to top margin but ensure GUI stays within vertical bounds
     targetY := margin
+    if (targetY + h > screenH) {
+        targetY := Max(0, screenH - h - margin)
+    }
+
     gui.Move(targetX, targetY)
+
+    ; Re-assert topmost and visibility after moving
+    try {
+        WinSet("AlwaysOnTop", "On", "ahk_id " . gui.Hwnd)
+        gui.Show("NoActivate")
+    } catch {
+        ; ignore
+    }
 }
 
 CheckMouseOverControls() {
