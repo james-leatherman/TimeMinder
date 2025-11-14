@@ -571,10 +571,10 @@ ShakeGui(gui, iterations := 10, distance := 15) {
 
     ; Ensure GUI remains topmost and visible after shaking (some apps can steal Z-order)
     try {
-        WinSet("AlwaysOnTop", "On", "ahk_id " . gui.Hwnd)
+        WinSetAlwaysOnTop(1, "ahk_id " . gui.Hwnd)
         gui.Show("NoActivate")
     } catch {
-        ; ignore if WinSet isn't available in some environments
+        ; ignore if WinSetAlwaysOnTop isn't available in some environments
     }
 }
 
