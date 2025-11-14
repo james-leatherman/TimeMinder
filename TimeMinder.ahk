@@ -603,7 +603,7 @@ MoveGuiToOtherTopRight(gui, margin := 10) {
 
     ; Re-assert topmost and visibility after moving
     try {
-        WinSet("AlwaysOnTop", "On", "ahk_id " . gui.Hwnd)
+        WinSetAlwaysOnTop(1, "ahk_id " . gui.Hwnd)
         gui.Show("NoActivate")
     } catch {
         ; ignore
