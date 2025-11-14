@@ -293,9 +293,7 @@ updateTimer(*) {
             if (timeSinceSessionTime >= 60000) {
                 currentMinute := timeSinceSessionTime // 60000  ; 1 == first full minute after flashing started
                 if (currentMinute > lastShakeMinute) {
-                    ; Move to top-right of the other display then shake
-                    MoveGuiToOtherTopRight(myGui, 10)
-                    Sleep(150)
+                    ; Shake the GUI in place (no moving between monitors)
                     ShakeGui(myGui, 10, 15)
                     lastShakeMinute := currentMinute
                     lastShakeTime := A_TickCount
@@ -570,9 +568,12 @@ ShakeGui(gui, iterations := 10, distance := 15) {
     gui.Move(restoreX, origY)
 
     ; Ensure GUI remains topmost and visible after shaking (some apps can steal Z-order)
+    Sleep(50)
     try {
         WinSetAlwaysOnTop(1, "ahk_id " . gui.Hwnd)
         gui.Show("NoActivate")
+        Sleep(50)
+        WinActivate("ahk_id " . gui.Hwnd)
     } catch {
         ; ignore if WinSetAlwaysOnTop isn't available in some environments
     }
@@ -602,9 +603,12 @@ MoveGuiToOtherTopRight(gui, margin := 10) {
     gui.Move(targetX, targetY)
 
     ; Re-assert topmost and visibility after moving
+    Sleep(50)
     try {
         WinSetAlwaysOnTop(1, "ahk_id " . gui.Hwnd)
         gui.Show("NoActivate")
+        Sleep(50)
+        WinActivate("ahk_id " . gui.Hwnd)
     } catch {
         ; ignore
     }
@@ -747,8 +751,7 @@ DecrementBreakElapsed() {
 ^+s::SetCustomSound()
 ^+i::ShowSoundInfo()
 ^+k::{
-    MoveGuiToOtherTopRight(myGui, 10)
-    Sleep(150)
+    global myGui
     ShakeGui(myGui, 10, 15)
 }
 
