@@ -8,7 +8,8 @@
 
 param(
     [switch]$Distribution,
-    [string]$Ahk2ExePath
+    [string]$Ahk2ExePath,
+    [switch]$VerboseLogs
 )
 
 # --- Configuration ---
@@ -134,6 +135,31 @@ $errLog = Join-Path $env:TEMP "ahk2exe_stderr_$([System.IO.Path]::GetRandomFileN
 
 Write-Host "Invoking compiler (capturing stdout/stderr):" -ForegroundColor Gray
 Write-Host "  $Ahk2ExePath $($CompilerArgs -join ' ')" -ForegroundColor Gray
+
+# When verbose logging is requested, run the compiler under cmd.exe with
+# stdout/stderr redirected to a temp log file so we always capture its output.
+if ($VerboseLogs) {
+    $logFile = Join-Path $env:TEMP ("ahk2exe_verbose_" + ([System.IO.Path]::GetRandomFileName()) + ".log")
+    $quotedArgs = $CompilerArgs | ForEach-Object { '"' + ($_ -replace '"','\"') + '"' }
+    $commandString = '"' + $Ahk2ExePath + '"' + ' ' + ($quotedArgs -join ' ')
+    $redir = " > `"$logFile`" 2>&1"
+    Write-Host "Verbose logging enabled — writing compiler output to: $logFile" -ForegroundColor Yellow
+    Write-Host "Running: cmd.exe /c $commandString$redir" -ForegroundColor Gray
+
+    & cmd.exe /c ($commandString + $redir)
+    $exit = $LASTEXITCODE
+    Write-Host "Compiler exit code: $exit"
+    Write-Host "Compiler output saved: $logFile"
+    if ($exit -ne 0) {
+        Write-Error "Compiler failed with exit code $exit. See log: $logFile"
+        exit $exit
+    }
+
+    # Return to caller (build successful)
+    Pop-Location
+    Write-Host "Build successful! $OutputFile created." -ForegroundColor Green
+    exit 0
+}
 
 ## Some builds (Ahk2Exe) behave differently when launched from PowerShell vs cmd.exe.
 ## Run the full command under cmd.exe (/c) so the compiler sees the environment it expects,
