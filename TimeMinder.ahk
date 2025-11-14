@@ -55,9 +55,11 @@ pausedSessionTime := 0
 pauseTick := 0
 isFirstTick := true
 ; --- Activity / pause-on-activity settings ---
-activityIdleThreshold := 1000 ; ms since last input to consider "activity" (1 second)
+activityIdleThreshold := 5000 ; ms since last input to consider "activity" (5 seconds)
 breakPaused := false
 breakPauseStart := 0
+lastShakeTime := 0  ; Track last time we shook the GUI (absolute tick)
+lastShakeMinute := -1 ; Track which minute index we last shook at (minutes since flash start)
 
 ; Create GUI
 myGui := Gui("-Caption +ToolWindow +AlwaysOnTop")
@@ -210,7 +212,7 @@ BeepNotification(*) {
 }
 
 updateTimer(*) {
-    global finished, startTick, counterText, clockText, breakText, breakActive, breakStart, flashTimer, pausedSessionTime, pauseTick, breakTextLastShown, breakTextAutoHide, myGui, currentTotalTime, lastTotalTick, totalTimeText, sessionTime, isFirstTick
+    global finished, startTick, counterText, clockText, breakText, breakActive, breakStart, flashTimer, pausedSessionTime, pauseTick, breakTextLastShown, breakTextAutoHide, myGui, currentTotalTime, lastTotalTick, totalTimeText, sessionTime, isFirstTick, breakPaused, breakPauseStart, activityIdleThreshold, currentSessionTime, breakTime, lastShakeTime, lastShakeMinute
     global sessionBeepActive, totalBeepActive
     if (finished) {
         return
@@ -241,7 +243,7 @@ updateTimer(*) {
                 breakPaused := false
             }
         }
-        ; Flash after 10 minutes on break (only when not paused)
+        ; Flash after break time reached (only when not paused)
         if (!breakPaused && (A_TickCount - breakStart >= breakTime)) {
             flashTimer := !flashTimer
             breakText.Visible := flashTimer
@@ -257,7 +259,7 @@ updateTimer(*) {
         breakMins := breakElapsed // 60000
         breakSecs := Mod(breakElapsed // 1000, 60)
         if (breakPaused) {
-            breakText.Text := Format("Break Paused: {:02}:{:02}", breakMins, breakSecs)
+            breakText.Text := Format("Paused: {:02}:{:02}", breakMins, breakSecs)
             breakText.Opt("BackgroundFFFF00") ; Yellow background when paused
             breakText.SetFont("c222222") ; Dark text
         } else {
@@ -285,6 +287,21 @@ updateTimer(*) {
             breakText.Text := "Take Break"
             breakText.Visible := true
             breakTextAutoHide := false
+            
+            ; Shake every minute after "Take Break" has been flashing for more than 1 minute
+            timeSinceSessionTime := currentSessionTime - sessionTime
+            if (timeSinceSessionTime >= 60000) {
+                currentMinute := timeSinceSessionTime // 60000  ; 1 == first full minute after flashing started
+                if (currentMinute > lastShakeMinute) {
+                    ; Move to top-right of the other display then shake
+                    MoveGuiToOtherTopRight(myGui, 10)
+                    Sleep(150)
+                    ShakeGui(myGui, 10, 15)
+                    lastShakeMinute := currentMinute
+                    lastShakeTime := A_TickCount
+                }
+            }
+            
             ; --- Start session beep if not already active ---
             if (!sessionBeepActive) {
                 SetTimer(BeepNotification, 15000) ; Every 15 seconds
@@ -303,6 +320,9 @@ updateTimer(*) {
                 SetTimer(BeepNotification, 0)
                 sessionBeepActive := false
             }
+            ; Reset shake tracking when session not yet at sessionTime
+            lastShakeMinute := -1
+            lastShakeTime := 0
         }
     }
     ; Only clamp display, not elapsed
@@ -522,6 +542,39 @@ ShowBreakText() {
     breakTextAutoHide := true
 }
 
+ShakeGui(gui, iterations := 10, distance := 15) {
+    ; Get current position
+    gui.GetPos(&origX, &origY)
+    
+    Loop iterations {
+        if (Mod(A_Index, 2) = 1) {
+            gui.Move(origX + distance, origY)  ; Move right
+        } else {
+            gui.Move(origX - distance, origY)  ; Move left
+        }
+        Sleep(75)
+    }
+    gui.Move(origX, origY)  ; Reset to original position
+}
+
+MoveGuiToOtherTopRight(gui, margin := 10) {
+    ; Heuristic: use primary screen width to pick the other monitor's approximate top-right.
+    ; This assumes monitors are arranged horizontally (common case). If monitors differ in
+    ; size or arrangement the result may need manual adjustment.
+    gui.GetPos(&x, &y, &w, &h)
+    primaryW := A_ScreenWidth
+
+    if (x + w/2 < primaryW) {
+        ; Move to the right of the primary screen (other monitor's right area)
+        targetX := primaryW + (primaryW - w) - margin
+    } else {
+        ; Move to top-right of the left/other monitor (approximate)
+        targetX := margin
+    }
+    targetY := margin
+    gui.Move(targetX, targetY)
+}
+
 CheckMouseOverControls() {
     global myGui, breakActive, startTick, breakText, breakTextLastShown, breakTextAutoHide, breakTextMouseOver
     if breakActive
@@ -658,6 +711,11 @@ DecrementBreakElapsed() {
 
 ^+s::SetCustomSound()
 ^+i::ShowSoundInfo()
+^+k::{
+    MoveGuiToOtherTopRight(myGui, 10)
+    Sleep(150)
+    ShakeGui(myGui, 10, 15)
+}
 
 SetCustomSound() {
     global customSoundPath, soundsDir
