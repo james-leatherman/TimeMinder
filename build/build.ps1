@@ -110,15 +110,33 @@ if (Test-Path $OutputFile) {
     Write-Host "Removed old executable: $OutputFile"
 }
 
+# Find AutoHotkey v2 base file dynamically
+$BaseFilePaths = @(
+    "C:\Program Files\AutoHotkey\v2\AutoHotkey.exe",
+    "C:\Program Files (x86)\AutoHotkey\v2\AutoHotkey.exe",
+    (Join-Path (Split-Path $Ahk2ExePath) "AutoHotkey.exe")
+)
+$BaseFile = $null
+foreach ($basePath in $BaseFilePaths) {
+    if (Test-Path $basePath) {
+        $BaseFile = $basePath
+        break
+    }
+}
+
 # Set up compiler arguments
 # Build compiler arguments as plain strings (Start-Process will handle quoting)
 $CompilerArgs = @(
     "/in", $SourceFile,
     "/out", $OutputFile,
-    "/icon", $IconFile,
-    "/base", "C:\Program Files\AutoHotkey\v2\AutoHotkey.exe",
-    "/silent"
+    "/icon", $IconFile
 )
+
+# Add /base parameter only if we found the base file
+if ($BaseFile) {
+    $CompilerArgs += "/base", $BaseFile
+}
+$CompilerArgs += "/silent"
 
 # Change to the project root directory for the build process
 Push-Location $ProjectRoot
@@ -140,8 +158,17 @@ Write-Host "  $Ahk2ExePath $($CompilerArgs -join ' ')" -ForegroundColor Gray
 # stdout/stderr redirected to a temp log file so we always capture its output.
 if ($VerboseLogs) {
     $logFile = Join-Path $env:TEMP ("ahk2exe_verbose_" + ([System.IO.Path]::GetRandomFileName()) + ".log")
-    $quotedArgs = $CompilerArgs | ForEach-Object { '"' + ($_ -replace '"','\"') + '"' }
-    $commandString = '"' + $Ahk2ExePath + '"' + ' ' + ($quotedArgs -join ' ')
+    # Properly escape arguments for cmd.exe - paths with spaces need to be quoted and escaped
+    $escapedArgs = $CompilerArgs | ForEach-Object {
+        if ($_ -match '\s') {
+            # Path contains spaces - quote and escape quotes
+            '"' + ($_ -replace '"','""') + '"'
+        } else {
+            # No spaces - quote normally
+            '"' + $_ + '"'
+        }
+    }
+    $commandString = '"' + $Ahk2ExePath + '"' + ' ' + ($escapedArgs -join ' ')
     $redir = " > `"$logFile`" 2>&1"
     Write-Host "Verbose logging enabled — writing compiler output to: $logFile" -ForegroundColor Yellow
     Write-Host "Running: cmd.exe /c $commandString$redir" -ForegroundColor Gray
@@ -164,8 +191,17 @@ if ($VerboseLogs) {
 ## Some builds (Ahk2Exe) behave differently when launched from PowerShell vs cmd.exe.
 ## Run the full command under cmd.exe (/c) so the compiler sees the environment it expects,
 ## without creating a temporary batch file on disk.
-$quotedArgs = $CompilerArgs | ForEach-Object { '"' + ($_ -replace '"','\"') + '"' }
-$commandString = '"' + $Ahk2ExePath + '"' + ' ' + ($quotedArgs -join ' ')
+# Properly escape arguments for cmd.exe - paths with spaces need to be quoted and escaped
+$escapedArgs = $CompilerArgs | ForEach-Object {
+    if ($_ -match '\s') {
+        # Path contains spaces - quote and escape quotes for cmd.exe (double quotes)
+        '"' + ($_ -replace '"','""') + '"'
+    } else {
+        # No spaces - quote normally
+        '"' + $_ + '"'
+    }
+}
+$commandString = '"' + $Ahk2ExePath + '"' + ' ' + ($escapedArgs -join ' ')
 
 Write-Host "Running under cmd.exe: $commandString" -ForegroundColor Gray
 
@@ -187,16 +223,41 @@ if (-not $didFallback -and $proc -and $proc.ExitCode -eq 0) {
 } else {
     if (-not $didFallback) { Write-Host "Direct invocation returned non-zero exit code; attempting cmd.exe fallback..." -ForegroundColor Yellow }
 
-    $quotedArgs = $CompilerArgs | ForEach-Object { '"' + ($_ -replace '"','\"') + '"' }
-    $commandString = '"' + $Ahk2ExePath + '"' + ' ' + ($quotedArgs -join ' ')
+    # Build command string for cmd.exe /c - properly escape paths with spaces
+    # For cmd.exe, we need to quote paths with spaces and escape internal quotes by doubling them
+    $cmdParts = @()
+    $cmdParts += if ($Ahk2ExePath -match '\s') { 
+        '"' + ($Ahk2ExePath -replace '"', '""') + '"' 
+    } else { 
+        $Ahk2ExePath 
+    }
+    
+    # Quote each argument - cmd.exe expects quotes around paths with spaces
+    foreach ($arg in $CompilerArgs) {
+        if ($arg -match '\s') {
+            $cmdParts += '"' + ($arg -replace '"', '""') + '"'
+        } else {
+            $cmdParts += $arg
+        }
+    }
+    
+    # Build the full command string for cmd.exe /c
+    $cmdCommand = $cmdParts -join ' '
 
-    Write-Host "Fallback: running under cmd.exe: $commandString" -ForegroundColor Gray
+    Write-Host "Fallback: running under cmd.exe: $cmdCommand" -ForegroundColor Gray
     try {
-        $proc2 = Start-Process -FilePath 'cmd.exe' -ArgumentList "/c $commandString" -Wait -PassThru
+        # Use the call operator with cmd.exe - this handles escaping better than Start-Process
+        & cmd.exe /c $cmdCommand
+        $cmdExitCode = $LASTEXITCODE
+        
+        # Create a process object to match expected structure
+        $proc2 = New-Object PSObject -Property @{
+            ExitCode = $cmdExitCode
+        }
     } catch {
         Write-Host "Failed to run fallback via cmd.exe: $($_.Exception.Message)" -ForegroundColor Red
         Write-Host "You can try running the following manually:" -ForegroundColor Yellow
-        Write-Host "  $commandString" -ForegroundColor Gray
+        Write-Host "  cmd.exe /c $cmdCommand" -ForegroundColor Gray
         exit 1
     }
 
