@@ -60,11 +60,6 @@ breakPaused := false
 breakPauseStart := 0
 lastShakeTime := 0  ; Track last time we shook the GUI (absolute tick)
 lastShakeMinute := -1 ; Track which minute index we last shook at (minutes since flash start)
-originalMonitorX := 0 ; Store original X position before moving to second monitor
-originalMonitorY := 0 ; Store original Y position before moving to second monitor
-windowOnSecondMonitor := false ; Track if window is currently on second monitor
-lastHotkeyTime := 0 ; Track last time a hotkey was executed to exclude from break activity detection
-hotkeyOverrideWindow := 1000 ; ms window after hotkey execution to ignore activity detection
 
 ; Create GUI
 myGui := Gui("-Caption +ToolWindow +AlwaysOnTop")
@@ -232,12 +227,7 @@ updateTimer(*) {
     if breakActive {
         currentSessionTime := pausedSessionTime
         ; If user activity (keyboard/mouse) is detected via A_TimeIdle, pause the break timer
-        ; BUT ignore activity that happens shortly after hotkey execution (hotkey override)
-        global lastHotkeyTime, hotkeyOverrideWindow
-        timeSinceLastHotkey := A_TickCount - lastHotkeyTime
-        isHotkeyOverride := (timeSinceLastHotkey < hotkeyOverrideWindow)
-        
-        if (A_TimeIdle < activityIdleThreshold && !isHotkeyOverride) {
+        if (A_TimeIdle < activityIdleThreshold) {
             if (!breakPaused) {
                 breakPaused := true
                 breakPauseStart := A_TickCount
@@ -454,13 +444,9 @@ BreakTextHandler(txt, *) {
         finished := true
 
         ; Perform one final update of time values
-        global currentSessionTime, currentTotalTime, startTick, lastTotalTick, pausedSessionTime
         if (!breakActive) {
              currentSessionTime := Max(A_TickCount - startTick, 0)
              currentTotalTime += (A_TickCount - lastTotalTick)
-        } else {
-             ; If on break, use paused session time
-             currentSessionTime := pausedSessionTime
         }
 
         ; Format and display final session time
@@ -501,7 +487,6 @@ BreakTextHandler(txt, *) {
         breakText.Opt("Background00FF00") ; Green
         breakText.SetFont("c222222") ; Dark text
         ; Pause total time (do not update totalTime while on break)
-        ; Window should already be on second monitor from shake - keep it there
     } else {
         breakActive := false
         breakPaused := false
@@ -513,24 +498,6 @@ BreakTextHandler(txt, *) {
         breakText.Opt("Background808080") ; Gray
         breakText.SetFont("cFFFFFF") ; White text
         ; Do not reset totalTime
-        
-        ; Move window back to first monitor when break ends
-        global originalMonitorX, originalMonitorY, windowOnSecondMonitor, myGui
-        if (windowOnSecondMonitor) {
-            try {
-                ; Get window size
-                myGui.GetPos(&x, &y, &w, &h)
-                
-                ; Move back to original position on first monitor
-                myGui.Move(originalMonitorX, originalMonitorY)
-                windowOnSecondMonitor := false
-                
-                ; Small delay to let move complete
-                Sleep(50)
-            } catch {
-                ; If move fails, window will stay where it is
-            }
-        }
     }
 
     ; --- Stop beep when button is clicked ---
@@ -549,12 +516,6 @@ GuiStartDrag(btn, *) {
 }
 
 ClampGuiToScreen(gui) {
-    global windowOnSecondMonitor
-    ; Don't clamp if window is on second monitor during break - let it stay there
-    if (windowOnSecondMonitor) {
-        return
-    }
-    
     screenW := SysGet(78)
     screenH := SysGet(79)
     x := y := w := h := 0
@@ -580,124 +541,31 @@ ShowBreakText() {
 }
 
 ShakeGui(gui, iterations := 10, distance := 15) {
-    global originalMonitorX, originalMonitorY, windowOnSecondMonitor
-    
     ; Get current position
     gui.GetPos(&origX, &origY, &w, &h)
 
-    ; If not already on second monitor, store original position and move to second monitor FIRST
-    movedToSecondMonitor := false
-    if (!windowOnSecondMonitor) {
-        try {
-            ; Try to get monitor 2 coordinates - if it doesn't exist, this will throw an exception
-            MonitorGet(2, &monLeft, &monTop, &monRight, &monBottom)
-            
-            ; Check if we're currently on monitor 2
-            windowCenterX := origX + (w // 2)
-            windowCenterY := origY + (h // 2)
-            onMonitor2 := (windowCenterX >= monLeft && windowCenterX < monRight && windowCenterY >= monTop && windowCenterY < monBottom)
-            
-            ; Only move if we're not already on monitor 2
-            if (!onMonitor2) {
-                ; Store original position before moving
-                originalMonitorX := origX
-                originalMonitorY := origY
-                
-                ; Move to top-right of monitor 2 FIRST
-                margin := 20
-                targetX := monRight - w - margin
-                targetY := monTop + margin
-                
-                ; Ensure window stays within monitor bounds
-                if (targetX < monLeft) {
-                    targetX := monLeft + margin
-                }
-                if (targetY + h > monBottom) {
-                    targetY := monBottom - h - margin
-                }
-                
-                ; Move the window to the top-right of second monitor
-                gui.Move(targetX, targetY)
-                windowOnSecondMonitor := true
-                movedToSecondMonitor := true
-                
-                ; Small delay to let the move complete
-                Sleep(100)
-            }
-        } catch as err {
-            ; Monitor 2 doesn't exist - continue with shake at current position
-        }
-    }
-    
-    ; Get current position (after moving to second monitor if we did)
-    gui.GetPos(&shakeX, &shakeY, &shakeW, &shakeH)
+    ; Get visible screen bounds (virtual screen width/height)
+    screenW := SysGet(78)
+    screenH := SysGet(79)
 
-    ; Get bounds for the current monitor (where the window is)
-    shakeMinX := 0
-    shakeMaxX := SysGet(78) - shakeW ; Default to virtual screen bounds
-    
-    try {
-        ; Determine which monitor the window is on
-        if (windowOnSecondMonitor) {
-            ; On monitor 2 - get its bounds
-            MonitorGet(2, &monLeft, &monTop, &monRight, &monBottom)
-            shakeMinX := monLeft
-            shakeMaxX := monRight - shakeW
-        } else {
-            ; On monitor 1 - get its bounds
-            MonitorGet(1, &monLeft, &monTop, &monRight, &monBottom)
-            shakeMinX := monLeft
-            shakeMaxX := monRight - shakeW
-        }
-    } catch {
-        ; Fallback to virtual screen bounds if monitor detection fails
-    }
+    ; Compute min/max allowed X so GUI stays visible
+    minX := 0
+    maxX := Max(0, screenW - w)
 
-    ; Shake the GUI in place (on whichever monitor it's currently on)
     Loop iterations {
         if (Mod(A_Index, 2) = 1) {
-            newX := shakeX + distance
+            newX := origX + distance
         } else {
-            newX := shakeX - distance
+            newX := origX - distance
         }
-        ; Clamp movement so the GUI never goes off-screen on current monitor
-        newX := (newX < shakeMinX) ? shakeMinX : ((newX > shakeMaxX) ? shakeMaxX : newX)
-        gui.Move(newX, shakeY)
+        ; Clamp movement so the GUI never goes off-screen
+        newX := (newX < minX) ? minX : ((newX > maxX) ? maxX : newX)
+        gui.Move(newX, origY)
         Sleep(75)
     }
-    
-    ; Restore to position after shaking (should be on second monitor if we moved there)
-    if (windowOnSecondMonitor) {
-        ; Get monitor 2 coordinates again to ensure we stay on it
-        try {
-            MonitorGet(2, &monLeft, &monTop, &monRight, &monBottom)
-            margin := 20
-            restoreX := monRight - shakeW - margin
-            restoreY := monTop + margin
-            
-            ; Ensure window stays within monitor bounds
-            if (restoreX < monLeft) {
-                restoreX := monLeft + margin
-            }
-            if (restoreY + shakeH > monBottom) {
-                restoreY := monBottom - shakeH - margin
-            }
-            
-            gui.Move(restoreX, restoreY)
-        } catch {
-            ; Monitor 2 no longer exists - restore to original position
-            gui.Move(originalMonitorX, originalMonitorY)
-            windowOnSecondMonitor := false
-        }
-    } else {
-        ; Not on second monitor - restore to original position
-        ; Use virtual screen bounds for clamping
-        screenW := SysGet(78)
-        minX := 0
-        maxX := Max(0, screenW - shakeW)
-        restoreX := (origX < minX) ? minX : ((origX > maxX) ? maxX : origX)
-        gui.Move(restoreX, origY)
-    }
+    ; Restore original position (clamped to visible area)
+    restoreX := (origX < minX) ? minX : ((origX > maxX) ? maxX : origX)
+    gui.Move(restoreX, origY)
 
     ; Ensure GUI remains topmost and visible after shaking (some apps can steal Z-order)
     Sleep(50)
@@ -774,108 +642,53 @@ CheckMouseOverControls() {
     }
 }
 
-; Helper function to mark hotkey execution (for break override)
-MarkHotkeyExecution() {
-    global lastHotkeyTime
-    lastHotkeyTime := A_TickCount
-}
-
 ^q::ExitApp
 
-^Right::{
-    MarkHotkeyExecution()
-    AddFiveMinutes()
-}
+^Right::AddFiveMinutes()
 
 AddFiveMinutes() {
-    global startTick, currentTotalTime, lastTotalTick, breakActive, breakStart
-    if (breakActive) {
-        ; If on break, increment break time
-        breakStart -= 300000 ; Subtract from breakStart to increase elapsed time
-    } else {
-        ; Otherwise, increment session time
-        startTick -= 300000
-        currentTotalTime += 300000
-        lastTotalTick := A_TickCount
-    }
+    global startTick, currentTotalTime, lastTotalTick
+    startTick -= 300000
+    currentTotalTime += 300000
+    lastTotalTick := A_TickCount
 }
 
-^Left::{
-    MarkHotkeyExecution()
-    SubtractFiveMinutes()
-}
+^Left::SubtractFiveMinutes()
 
 SubtractFiveMinutes() {
-    global startTick, currentTotalTime, breakActive, breakStart
-    if (breakActive) {
-        ; If on break, decrement break time
-        newBreakStart := breakStart + 300000 ; Add 5 minutes to breakStart to decrease elapsed time
-        elapsed := A_TickCount - newBreakStart
-        if (elapsed < 0) {
-            breakStart := A_TickCount ; Clamp so timer shows 00:00
-        } else {
-            breakStart := newBreakStart
-        }
+    global startTick, currentTotalTime
+    newStartTick := startTick + 300000 ; Add 5 minutes (in ms) to startTick to decrement timer
+    currentSessionTime := A_TickCount - newStartTick
+    if (currentSessionTime < 0) {
+        startTick := A_TickCount ; Clamp so timer shows 00:00
+        ; Clamp currentTotalTime so it doesn't go below zero
+        currentTotalTime := Max(currentTotalTime - (A_TickCount - startTick), 0)
     } else {
-        ; Otherwise, decrement session time
-        newStartTick := startTick + 300000 ; Add 5 minutes (in ms) to startTick to decrement timer
-        currentSessionTime := A_TickCount - newStartTick
-        if (currentSessionTime < 0) {
-            startTick := A_TickCount ; Clamp so timer shows 00:00
-            ; Clamp currentTotalTime so it doesn't go below zero
-            currentTotalTime := Max(currentTotalTime - (A_TickCount - startTick), 0)
-        } else {
-            startTick := newStartTick
-            currentTotalTime := Max(currentTotalTime - 300000, 0)
-        }
+        startTick := newStartTick
+        currentTotalTime := Max(currentTotalTime - 300000, 0)
     }
 }
 
-^.::{
-    MarkHotkeyExecution()
-    AddOneMinute()
-}
+^.::AddOneMinute()
 
 AddOneMinute() {
-    global startTick, currentTotalTime, breakActive, breakStart, lastTotalTick
-    if (breakActive) {
-        ; If on break, increment break time
-        breakStart -= 60000 ; Subtract from breakStart to increase elapsed time
-    } else {
-        ; Otherwise, increment session time
-        startTick -= 60000 ; Subtract 1 minute (in ms) from startTick to increment timer
-        currentTotalTime += 60000
-        lastTotalTick := A_TickCount
-    }
+    global startTick, currentTotalTime
+    startTick -= 60000 ; Subtract 1 minute (in ms) from startTick to increment timer
+    currentTotalTime += 60000
 }
 
-^,::{
-    MarkHotkeyExecution()
-    SubtractOneMinute()
-}
+^,::SubtractOneMinute()
 
 SubtractOneMinute() {
-    global startTick, currentTotalTime, breakActive, breakStart
-    if (breakActive) {
-        ; If on break, decrement break time
-        newBreakStart := breakStart + 60000 ; Add 1 minute to breakStart to decrease elapsed time
-        elapsed := A_TickCount - newBreakStart
-        if (elapsed < 0) {
-            breakStart := A_TickCount ; Clamp so timer shows 00:00
-        } else {
-            breakStart := newBreakStart
-        }
+    global startTick, currentTotalTime
+    newStartTick := startTick + 60000 ; Add 1 minute (in ms) to startTick to decrement timer
+    currentSessionTime := A_TickCount - newStartTick
+    if (currentSessionTime < 0) {
+        startTick := A_TickCount ; Clamp so timer shows 00:00
+        currentTotalTime := Max(currentTotalTime - (A_TickCount - startTick), 0)
     } else {
-        ; Otherwise, decrement session time
-        newStartTick := startTick + 60000 ; Add 1 minute (in ms) to startTick to decrement timer
-        currentSessionTime := A_TickCount - newStartTick
-        if (currentSessionTime < 0) {
-            startTick := A_TickCount ; Clamp so timer shows 00:00
-            currentTotalTime := Max(currentTotalTime - (A_TickCount - startTick), 0)
-        } else {
-            startTick := newStartTick
-            currentTotalTime := Max(currentTotalTime - 60000, 0)
-        }
+        startTick := newStartTick
+        currentTotalTime := Max(currentTotalTime - 60000, 0)
     }
 }
 
@@ -886,19 +699,12 @@ CloseIfFinished() {
     }
 }
 
-^End::{
-    MarkHotkeyExecution()
-    SetTotalToLimit()
-}
+^End::SetTotalToLimit()
+^Home::ResetTotalToZero()
 
 SetTotalToLimit() {
     global currentTotalTime, totalTime
     currentTotalTime := totalTime
-}
-
-^Home::{
-    MarkHotkeyExecution()
-    ResetTotalToZero()
 }
 
 ResetTotalToZero() {
@@ -906,19 +712,12 @@ ResetTotalToZero() {
     currentTotalTime := 0
 }
 
-^PgDn::{
-    MarkHotkeyExecution()
-    SetSessionToLimit()
-}
+^PgDn::SetSessionToLimit()
+^PgUp::ResetSessionToZero()
 
 SetSessionToLimit() {
     global startTick, sessionTime
     startTick := A_TickCount - sessionTime
-}
-
-^PgUp::{
-    MarkHotkeyExecution()
-    ResetSessionToZero()
 }
 
 ResetSessionToZero() {
@@ -926,21 +725,14 @@ ResetSessionToZero() {
     startTick := A_TickCount
 }
 
-^]::{
-    MarkHotkeyExecution()
-    IncrementBreakElapsed()
-}
+^]::IncrementBreakElapsed()
+^[::DecrementBreakElapsed()
 
 IncrementBreakElapsed() {
     global breakActive, breakStart
     if (breakActive) {
         breakStart -= 60000 ; Subtract 1 minute from breakStart (so elapsed increases by 1 min)
     }
-}
-
-^[::{
-    MarkHotkeyExecution()
-    DecrementBreakElapsed()
 }
 
 DecrementBreakElapsed() {
@@ -956,19 +748,10 @@ DecrementBreakElapsed() {
     }
 }
 
-^+s::{
-    MarkHotkeyExecution()
-    SetCustomSound()
-}
-
-^+i::{
-    MarkHotkeyExecution()
-    ShowSoundInfo()
-}
-
+^+s::SetCustomSound()
+^+i::ShowSoundInfo()
 ^+k::{
     global myGui
-    MarkHotkeyExecution()
     ShakeGui(myGui, 10, 15)
 }
 
